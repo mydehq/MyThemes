@@ -157,7 +157,7 @@ jobs:
           cp dist/index.yml . 2>/dev/null || true
 
           # Add all files
-          git add .
+          git add index.yml *.tar.gz
 
           # Check if there are changes to commit
           if git diff --staged --quiet; then
