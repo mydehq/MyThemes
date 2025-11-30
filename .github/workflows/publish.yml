@@ -34,12 +34,10 @@ jobs:
           archives=()
 
           # Create index.yml header
-          cat > dist/index.yml << 'EOF'
-          # MyThemes Index
-          # Auto-generated theme listing
-          updated: "PLACEHOLDER_DATE"
-          themes:
-          EOF
+          echo "# MyThemes Index" > dist/index.yml
+          echo "# Auto-generated theme listing" >> dist/index.yml
+          echo "updated: \"PLACEHOLDER_DATE\"" >> dist/index.yml
+          echo "themes:" >> dist/index.yml
 
           for theme_dir in themes/*/; do
             if [ ! -d "$theme_dir" ]; then
@@ -80,10 +78,8 @@ jobs:
             archives+=("$archive_name")
 
             # Append to index.yml
-            cat >> dist/index.yml << EOF
-            - name: "$theme_name"
-              version: "$version"
-            EOF
+            echo "  - name: \"$theme_name\"" >> dist/index.yml
+            echo "    version: \"$version\"" >> dist/index.yml
 
             echo "✓ Created: $archive_name"
           done
