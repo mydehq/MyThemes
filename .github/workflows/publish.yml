@@ -1,0 +1,199 @@
+name: Package & Publish themes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish.yml
+      - "themes/*"
+
+  workflow_dispatch:
+
+concurrency:
+  group: publish-themes
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    outputs:
+      theme-archives: ${{ steps.package.outputs.theme-archives }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Package themes
+        id: package
+        run: |
+          mkdir -p dist
+          archives=()
+
+          # Create index.yml header
+          cat > dist/index.yml << 'EOF'
+          # MyThemes Index
+          # Auto-generated theme listing
+          updated: "PLACEHOLDER_DATE"
+          themes:
+          EOF
+
+          for theme_dir in themes/*/; do
+            if [ ! -d "$theme_dir" ]; then
+              echo "Skipping non-directory $theme_dir"
+              continue
+            fi
+
+            theme_name="$(basename "$theme_dir")"
+            theme_yml="$theme_dir/theme.yml"
+
+            if [ ! -f "$theme_yml" ]; then
+              echo "ERROR: No theme.yml found in $theme_dir" >&2
+              exit 1
+            fi
+
+            # Check if theme.yml is empty
+            if [ ! -s "$theme_yml" ]; then
+              echo "ERROR: theme.yml is empty in $theme_dir, skipping" >&2
+              exit 1
+            fi
+
+            # Extract version
+            version=$(yq eval '.theme.version' "$theme_yml")
+
+            if [ "$version" = "null" ] || [ -z "$version" ]; then
+              echo "ERROR: No version found in $theme_yml" >&2
+              exit 1
+            fi
+
+            echo "Extracted version: $version for theme: $theme_name"
+
+            archive_name="${theme_name}-${version}.tar.gz"
+            echo "Creating archive: $archive_name"
+
+            # Create tar.gz archive of the theme directory
+            tar -czf "dist/$archive_name" -C themes "$theme_name"
+
+            archives+=("$archive_name")
+
+            # Append to index.yml
+            cat >> dist/index.yml << EOF
+            - name: "$theme_name"
+              version: "$version"
+            EOF
+
+            echo "✓ Created: $archive_name"
+          done
+
+          # Replace placeholders in index.yml
+          sed -i "s/PLACEHOLDER_DATE/$(date -u '+%Y-%m-%dT%H:%M:%SZ')/g" dist/index.yml
+
+          # Output the list of created archives
+          printf -v archive_list '%s,' "${archives[@]}"
+          archive_list="${archive_list%,}"
+          echo "theme-archives=$archive_list" >> $GITHUB_OUTPUT
+
+          echo "Created ${#archives[@]} theme archive(s) and index.yml"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: theme-archives
+          path: dist/*
+          retention-days: 30
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: compile
+    if: needs.compile.outputs.theme-archives != ''
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: theme-archives
+          path: dist
+
+      - name: Configure Git
+        run: |
+          git config user.name "soymadip"
+          git config user.email "soymadip-actions[bot]@users.noreply.github.com"
+
+      - name: Check repo branch
+        run: |
+          # Check if repo branch exists
+          if git ls-remote --heads origin repo | grep -q repo; then
+            git checkout repo
+            git pull origin repo
+          else
+            git checkout --orphan repo
+            git rm -rf .
+            echo "# Theme Repository" > README.md
+            echo "" >> README.md
+            echo "This branch contains packaged theme archives and index." >> README.md
+            echo "" >> README.md
+            echo "## Available Themes" >> README.md
+            echo "" >> README.md
+            echo "See \`index.yml\` for a complete listing of available themes." >> README.md
+            git add README.md
+            git commit -m "Initialize repo branch"
+            git push origin repo
+          fi
+
+      - name: Publish themes and index
+        run: |
+          # Copy new archives and index
+          cp dist/*.tar.gz . 2>/dev/null || true
+          cp dist/index.yml . 2>/dev/null || true
+
+          # Add all files
+          git add .
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No new archives or index changes to commit"
+          else
+            # Create commit message with list of archives
+            echo "Update theme archives and index" > commit_msg.txt
+            echo "" >> commit_msg.txt
+            echo "Themes updated:" >> commit_msg.txt
+            IFS=',' read -ra ARCHIVES <<< "${{ needs.compile.outputs.theme-archives }}"
+            for archive in "${ARCHIVES[@]}"; do
+              echo "- $archive" >> commit_msg.txt
+            done
+            echo "" >> commit_msg.txt
+            echo "Updated index.yml with theme metadata" >> commit_msg.txt
+            echo "" >> commit_msg.txt
+            echo "Generated from commit: ${{ github.sha }}" >> commit_msg.txt
+
+            git commit -F commit_msg.txt
+            git push origin repo
+
+            echo "✓ Published theme archives and index to repo branch"
+          fi
+
+      - name: Create release summary
+        run: |
+          echo "## 📦 Theme Archives Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following theme archives have been created and published to the \`repo\` branch:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          IFS=',' read -ra ARCHIVES <<< "${{ needs.compile.outputs.theme-archives }}"
+          for archive in "${ARCHIVES[@]}"; do
+            echo "- \`$archive\`" >> $GITHUB_STEP_SUMMARY
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📋 Index File" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The \`index.yml\` file has been updated with theme metadata." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View all files in the [\`repo\`](../../tree/repo) branch." >> $GITHUB_STEP_SUMMARY

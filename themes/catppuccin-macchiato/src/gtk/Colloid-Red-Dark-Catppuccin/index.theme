@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Colloid-Red-Dark-Catppuccin
+Comment=An Flat Gtk+ theme based on Elegant Design
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+GtkTheme=Colloid-Red-Dark-Catppuccin
+MetacityTheme=Colloid-Red-Dark-Catppuccin
+IconTheme=Colloid-Red-Catppuccin-Dark
+CursorTheme=Colloid-cursors
+ButtonLayout=close,minimize,maximize:menu
