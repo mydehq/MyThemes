@@ -74,7 +74,7 @@ jobs:
             echo "Creating new repo branch..."
             git checkout --orphan repo
             git rm -rf .
-            echo "# Theme Repository" > README.md
+            echo "# MyCTL Theme Repository" > README.md
             echo "" >> README.md
             echo "This branch contains packaged theme archives and index." >> README.md
             echo "" >> README.md
