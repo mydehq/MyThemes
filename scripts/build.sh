@@ -169,17 +169,17 @@ release_time=$(date +%s) || {
 
 log.info "Building index.json"
 
-schema_version=$(get-conf -r "index.schema_version" "$theme_dir") || {
+schema_version=$(get-conf -r "index.schema_version" "") || {
     log.error "Failed to get schema version"
     exit 1
 }
 
-repo_name=$(get-conf -r "index.repo_name" "$theme_dir") || {
+repo_name=$(get-conf -r "index.repo_name" "") || {
     log.error "Failed to get repo name"
     exit 1
 }
 
-download_url=$(get-conf -r "index.download_url" "$theme_dir") || {
+download_url=$(get-conf -r "index.download_url" "") || {
     log.error "Failed to get download URL"
     exit 1
 }
