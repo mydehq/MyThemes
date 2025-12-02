@@ -193,16 +193,18 @@ printf "  "; log.success "themes: $theme_count"
 
 # Build final index.json
 jq -n \
-    --argjson themes "$(cat "$TEMP_DIR/themes.json")" \
     --arg schema_version "$schema_version" \
     --arg repo_name "$repo_name" \
+    --arg release_time "$release_time" \
     --arg download_url "$download_url" \
+    --arg hash_algo "sha256" \
     --argjson themes "$(< "$TEMP_DIR/themes.json")" \
     '{
-        "schema_version": ($schema_version | tonumber),
+        "schema_version": $schema_version,
         "repo_name": $repo_name,
         "release_time": ($release_time | tonumber),
         "download_url": $download_url,
+        "hash_algo": $hash_algo,
         "themes": $themes
     }' > "$OUTPUT_DIR/index.json"
 
