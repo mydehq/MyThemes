@@ -47,11 +47,12 @@ mkdir themes/your-theme-name
 
 # 2. Add theme configuration
 cat > themes/your-theme-name/theme.yml << EOF
-theme:
-  version: "1.0"
-  desc: "Your theme description"
-  author: "Your Name"
-  repo: "https://github.com/your-repo"
+version: "1.0"
+desc: "Your theme description"
+author: "Your Name"
+repo: "https://github.com/your-repo"
+config:
+  icon-theme: icon-theme-name
 EOF
 
 # 3. Add theme assets in src/ directory

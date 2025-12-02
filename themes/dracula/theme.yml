@@ -1,7 +1,7 @@
 version: 1.0.0
 desc: Dracula Theme
 author: soymadip
-repo: https://github.com/mydehq/MyThemes
+url: https://github.com/mydehq/MyTM
 
 config:
   icon-theme: Papirus-Dark
