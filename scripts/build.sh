@@ -92,8 +92,7 @@ has-cmd yq jq tar awk || exit 1
 #------ Start Build --------
 
 # Create output dir and temp dir
-mkdir -p "$OUTPUT_DIR"
-mkdir -p "$TEMP_DIR"
+mkdir -p "$OUTPUT_DIR" "$TEMP_DIR"
 
 # Set up cleanup trap
 cleanup() {
