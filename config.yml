@@ -21,7 +21,7 @@ build:
 
 index:
   # Schema version to use
-  schema_version: 1
+  schema_version: 1.0
 
   # default repo name
   repo_name: "official"
