@@ -23,9 +23,9 @@ index:
   # Schema version to use
   schema_version: 1.0
 
-  # default repo name
+  # Default repo name
   repo_name: "official"
 
   # Direct Download link/path for archives
   # MUST add ${{file}} in the filename's place
-  download_url: "https://github.com/mydehq/MyThemes/raw/refs/heads/repo/${{file}}"
+  download_url: "https://github.com/mydehq/mytm/raw/refs/heads/repo/${{file}}"

@@ -1,19 +1,37 @@
 <div align="center">
 
-# MyThemes
+# MyTM
 
-**Themes for MyDE/MyCTL**
+MyTM or My Theme Manager is a [MyCTL](https://github.com/mydehq/myctl) plugin for desktop theme management.
+<br>
+Support gtk, qt, kde, rofi & others through templates
 
 </div>
 
 ---
 
+> [!WARNING]
+> The MyCTL plugin step is not required for now.
+
 ## Installation
 
-### Using MyCTL
+### Add the Plugin to MyCTL
 
 ```bash
-myctl theme theme <theme-name>
+myctl plugin add mytm
+```
+
+### Add the repo
+
+```bash
+mytm repo add -n official https://raw.githubusercontent.com/mydehq/mytm/refs/heads/repo/index.json
+```
+
+### Set a theme
+
+```bash
+mytm list
+mytm set <theme-name>  # this will install and apply the theme
 ```
 
 ## Adding New Themes
@@ -35,7 +53,13 @@ theme-name/
       └── rofi/           # Rofi theme styling (rasi)
 ```
 
-### Adding Themes
+where:
+
+- `theme.yml` contains theme metadata & dependencies (required)
+- `hooks.sh` contains setup scripts (optional)
+- `src/` dir contains theme files (optional)
+
+### Adding Themes to this Repo
 
 ```bash
 
