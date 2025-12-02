@@ -1,8 +1,7 @@
-theme:
-  version: 0.1
-  desc: Catppuccin Macchiato Maroon theme for MyDE
-  author: soymadip
-  repo: https://github.com/mydehq/MyThemes
+version: 0.1
+desc: Catppuccin Macchiato Maroon theme for MyDE
+author: soymadip
+repo: https://github.com/mydehq/MyThemes
 
 config:
   icon-theme: Papirus-Dark
