@@ -135,7 +135,12 @@ for theme_dir in "$INPUT_DIR"/*; do
     printf "   "; log.success "Packaged: $archive_name"
 
     theme_json=$(jq -n --arg name "$theme_name" --arg version "$theme_version" --arg file "$archive_name" --arg hash "$archive_hash" \
-        '{name: $name, version: $version, file: $file, hash: $hash}')
+        '{
+            name: $name,
+            version: $version,
+            file: $file,
+            hash: $hash
+        }')
 
     # Add to themes array
     jq --argjson theme "$theme_json" '. += [$theme]' \
