@@ -20,7 +20,7 @@ fi
 INPUT_DIR="$PROJECT_ROOT/themes"
 OUTPUT_DIR="$PROJECT_ROOT/dist"
 CONFIG_FILE="$PROJECT_ROOT/config.yml"
-TEMP_DIR="$OUTPUT_DIR/.tmp"
+TEMP_DIR="$PROJECT_ROOT/.tmp"
 
 #------------ functions ------------------
 
