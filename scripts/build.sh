@@ -164,11 +164,19 @@ release_time=$(date +%s) || {
 
 log.info "Building index.json"
 
-download_url=$(get-conf -r "output.download_url" "$theme_dir") || {
+
+repo_name=$(get-conf -r "index.repo_name" "$theme_dir") || {
+    log.error "Failed to get repo name"
+    exit 1
+}
+
+download_url=$(get-conf -r "index.download_url" "$theme_dir") || {
     log.error "Failed to get download URL"
     exit 1
 }
 
+printf "  "; log.success "repo_name: $repo_name"
+printf "  "; log.success "release_time: $release_time"
 printf "  "; log.success "download_url: $download_url"
 printf "  "; log.success "release_time: $release_time"
 printf "  "; log.success "themes: $theme_count"
@@ -177,11 +185,13 @@ printf "  "; log.success "themes: $theme_count"
 # Build final index.json
 jq -n \
     --argjson themes "$(cat "$TEMP_DIR/themes.json")" \
+    --arg repo_name "$repo_name" \
     --arg download_url "$download_url" \
     --arg release_time "$release_time" \
     '{
-        "download_url": $download_url,
+        "repo_name": $repo_name,
         "release_time": ($release_time | tonumber),
+        "download_url": $download_url,
         "themes": $themes
     }' > "$OUTPUT_DIR/index.json"
 
