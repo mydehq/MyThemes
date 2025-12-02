@@ -197,7 +197,7 @@ jq -n \
     --arg schema_version "$schema_version" \
     --arg repo_name "$repo_name" \
     --arg download_url "$download_url" \
-    --arg release_time "$release_time" \
+    --argjson themes "$(< "$TEMP_DIR/themes.json")" \
     '{
         "schema_version": ($schema_version | tonumber),
         "repo_name": $repo_name,
