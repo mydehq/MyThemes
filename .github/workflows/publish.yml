@@ -74,13 +74,9 @@ jobs:
             echo "Creating new repo branch..."
             git checkout --orphan repo
             git rm -rf .
-            echo "# MyCTL Theme Repository" > README.md
-            echo "" >> README.md
-            echo "This branch contains packaged theme archives and index." >> README.md
-            echo "" >> README.md
-            echo "## Available Themes" >> README.md
-            echo "" >> README.md
-            echo "See [index.json](index.json) for a complete listing of available themes." >> README.md
+            git checkout main -- .github/templates/repo-readme.md
+            cp .github/templates/repo-readme.md README.md
+            rm -rf .github
             git add README.md
             git commit -m "Initialize repo branch"
             echo "Pushing new repo branch..."
