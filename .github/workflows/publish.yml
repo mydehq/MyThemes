@@ -94,6 +94,9 @@ jobs:
           # Copy everything from output dir
           cp ${{ needs.compile.outputs.output-dir }}/* . 2>/dev/null || true
 
+          # Remove output dir
+          rm -rf ${{ needs.compile.outputs.output-dir }}
+
           # Add all files
           git add .
 
