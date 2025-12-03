@@ -4,15 +4,15 @@ This file is a template used by GitHub Actions to initialize the repo branch.
 
 <div align="center">
 
-# MyTM Global Theme Repo
+# MyTM Repo
 
-This branch contains packaged theme archives and index of MyCTL/MyDE.
+This branch contains packaged theme archives of [MyTM](https://github.com/mydehq/mytm) global themes.
 
 </div>
 
-## Available Themes
+## Themes
 
-See [index.json](index.json) for a complete listing of available themes.
+See [index.json](index.json) for a complete listing of available themes, other info.
 
 ---
 

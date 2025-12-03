@@ -5,10 +5,9 @@ on:
     branches: [main]
     paths:
       - .github/workflows/publish.yml
-      - "themes/*"
-      - "scripts/build.sh"
-      - "src/.utils.sh"
       - "src/repo-readme-template.md"
+      - "themes/*"
+      - "scripts/*"
 
   workflow_dispatch:
 
