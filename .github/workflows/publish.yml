@@ -6,6 +6,9 @@ on:
     paths:
       - .github/workflows/publish.yml
       - "themes/*"
+      - "scripts/build.sh"
+      - "src/.utils.sh"
+      - "src/repo-readme-template.md"
 
   workflow_dispatch:
 
