@@ -21,6 +21,7 @@ INPUT_DIR="$PROJECT_ROOT/themes"
 OUTPUT_DIR="$PROJECT_ROOT/dist"
 CONFIG_FILE="$PROJECT_ROOT/config.yml"
 TEMP_DIR="$PROJECT_ROOT/.tmp"
+README_TEMPLATE="$PROJECT_ROOT/src/repo-readme-template.md"
 
 #------------ functions ------------------
 
@@ -33,17 +34,18 @@ show-help() {
 MyCTL Theme Builder & Bundler
 
 DESC:
-    Builds theme packages, generates SHA256 checksums &
-    creates an index.json file with metadata.
+    Builds theme packages, generates SHA256 checksums,
+    creates an index.json with metadata, builds README.md.
 
 USAGE:
     $0 [OPTIONS]
 
 FLAGS:
-    -h, --help              Show this help message
-    -i, --input-dir DIR     Override input directory from config
-    -o, --output-dir DIR    Override output directory from config
-    -c, --config FILE       Set config file (default: $CONFIG_FILE)
+    -h, --help                Show this help message
+    -i, --input-dir DIR       Override input directory from config
+    -o, --output-dir DIR      Override output directory from config
+    -c, --config FILE         Set config file (default: $CONFIG_FILE)
+    -rt,--repo-template FILE  Set README template file (default: $README_TEMPLATE)
 EOF
 }
 
@@ -76,6 +78,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -c|--config)
             CONFIG_FILE="$2"
+            shift 2
+            ;;
+        -rt|--readme-template)
+            README_TEMPLATE="$2"
             shift 2
             ;;
         *)
@@ -183,11 +189,11 @@ download_url=$(get-conf -r "index.download_url" "") || {
     exit 1
 }
 
-printf "  "; log.success "schema_version: $schema_version"
-printf "  "; log.success "repo_name: $repo_name"
-printf "  "; log.success "release_time: $release_time"
-printf "  "; log.success "download_url: $download_url"
-printf "  "; log.success "themes: $theme_count"
+printf "   "; log.success "schema_version: $schema_version"
+printf "   "; log.success "repo_name: $repo_name"
+printf "   "; log.success "release_time: $release_time"
+printf "   "; log.success "download_url: $download_url"
+printf "   "; log.success "themes: $theme_count"
 
 
 # Build final index.json
@@ -208,6 +214,31 @@ jq -n \
     }' > "$OUTPUT_DIR/index.json"
 
 log.success "Built index.json"
+echo
+
+#--------- Build README ------------
+
+log.info "Building README.md"
+
+if [ ! -f "$README_TEMPLATE" ]; then
+    log.error "README template not found: $README_TEMPLATE"
+    exit 1
+fi
+
+awk '
+BEGIN { in_comment = 0; found_first_comment = 0 }
+/^<!--/ && !found_first_comment { in_comment = 1; found_first_comment = 1; next }
+/^-->$/ && in_comment { in_comment = 0; next }
+!in_comment { print }
+' "$README_TEMPLATE" > "$OUTPUT_DIR/README.md" || {
+    log.error "Failed to process README template"
+    exit 1
+}
+
+printf "   "; log.success "copied Template."
+printf "   "; log.success "Processed Template."
+
+log.success "Built README.md"
 echo
 
 # Cleanup
