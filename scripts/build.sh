@@ -25,7 +25,7 @@ TEMP_DIR="$PROJECT_ROOT/.tmp"
 #------------ functions ------------------
 
 # Source utility functions
-source "$SCRIPT_DIR/_utils.sh"
+source "$SCRIPT_DIR/.utils.sh"
 
 
 show-help() {
