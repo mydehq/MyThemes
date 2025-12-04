@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "repo_name": "official",
-  "release_time": 1764787985,
+  "release_time": 1764875080,
   "download_url": "https://github.com/mydehq/mytm/raw/refs/heads/repo/${{file}}",
   "hash_algo": "sha256",
   "themes": [
@@ -9,13 +9,13 @@
       "name": "catppuccin-macchiato",
       "version": "0.1",
       "file": "catppuccin-macchiato-0.1.tar.gz",
-      "hash": "fe151c3e872b544bddb0365fd1dceba401c14bed58b251fc5aece829f665c1cf"
+      "hash": "37369b4e7d95eb0bdcc81c3de3bd312fdffa13905eb0fdcc5685b321bcd47ab8"
     },
     {
       "name": "dracula",
       "version": "1.0.0",
       "file": "dracula-1.0.0.tar.gz",
-      "hash": "239eee75d28ab2fb3a7c6448dc4bfe71a442adbdb9fdca9548312fce79ba0f3d"
+      "hash": "c4ce81485c50774479c650c45d9f31475f9610a1e05576f4e5e4be7b652fe941"
     }
   ]
 }
