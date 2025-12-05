@@ -16,7 +16,7 @@ Supports gtk, qt, kde, rofi & others through templates
 ## Installation
 
 > [!WARNING]
-> MyTM is under development, nothing is finalized yet.
+> MyTM is under development, nothing is finalized yet.  
 > The MyCTL plugin system is not yet ready, so this is just individual script now.
 
 ### Add the Plugin to MyCTL
