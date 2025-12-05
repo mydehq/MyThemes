@@ -48,7 +48,7 @@ jobs:
         with:
           name: theme-archives
           path: ${{ steps.get-config.outputs.output-dir }}/*
-          retention-days: 30
+          retention-days: 7
 
   publish:
     runs-on: ubuntu-latest
@@ -72,7 +72,7 @@ jobs:
           git config user.name "soymadip"
           git config user.email "84225810+soymadip@users.noreply.github.com"
 
-      - name: Check repo branch
+      - name: Check repo branch & switch
         run: |
           # Check if repo branch exists
           if git ls-remote --heads origin repo | grep -q repo; then
