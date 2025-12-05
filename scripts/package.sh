@@ -27,6 +27,12 @@ README_TEMPLATE="$PROJECT_ROOT/src/repo-readme-template.md"
 # Source utility functions
 source "$SCRIPT_DIR/.utils.sh"
 
+if [ -n "$XDG_CACHE_HOME" ]; then
+    CACHE_DIR="$XDG_CACHE_HOME/mytm"
+else
+    CACHE_DIR="$HOME/.cache/mytm"
+fi
+
 
 show-help() {
     cat << EOF
@@ -110,17 +116,29 @@ echo '[]' >"$TEMP_DIR/themes.json"
 archives=()
 theme_count=0
 
-log.info "Packaging Themes: "
+log.info "Packaging Themes "
+
+
+# if [ -f "${CACHE_DIR}/mytm.json" ] && [ "$(jq 'has("themes")' "${CACHE_DIR}/mytm.json")" = "true" ]; then
+#     log.success "Found Cache."
+#     cache_exists=true
+# else
+#     log.info "No cache found."
+# fi
+
 for theme_dir in "$INPUT_DIR"/*; do
 
     validate-theme-dir "$theme_dir" || exit 1
 
     theme_yml="$theme_dir/theme.yml"
 
-    # Get theme name, replace spaces with `-`
-    theme_name="$(basename "$theme_dir")" && theme_name="${theme_name// /-}"
-
+    theme_name="$(basename "$theme_dir")"
     theme_version=$(get-theme-ver "$theme_yml") || exit 1
+
+    # cache_exists && {
+    #     if [ "" ]
+    # }
+
     archive_name="$(get-conf 'build.archive_name' "$theme_dir").tar.gz" || exit 1
     archive_path="$OUTPUT_DIR/$archive_name"
 
