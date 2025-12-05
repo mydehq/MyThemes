@@ -1,9 +1,8 @@
 <div align="center">
 
 <h1>
-    <img src="./src/icon.svg" alt="MyTM" width="100">
-    <br>
-    MyTM
+    <img src="./src/icon.png" alt="MyTM" width="80">
+    <p>MyTM</p>
 </h1>
 
 MyTM or My Theme Manager is a [MyCTL](https://github.com/mydehq/myctl) plugin for desktop theme management.
@@ -16,10 +15,11 @@ Supports gtk, qt, kde, rofi & others through templates
 
 ## Installation
 
-### Add the Plugin to MyCTL
-
 > [!WARNING]
-> The MyCTL plugin step is not required for now.
+> MyTM is under development, nothing is finalized yet.
+> The MyCTL plugin system is not yet ready, so this is just individual script now.
+
+### Add the Plugin to MyCTL
 
 ```bash
 myctl plugin add mytm
@@ -68,7 +68,7 @@ where:
 ```bash
 
 # 0. clone the repo
-git clone https://github.com/mydehq/MyThemes
+git clone https://github.com/mydehq/MyTM
 
 # 1. Create theme directory
 mkdir themes/your-theme-name
@@ -95,12 +95,60 @@ Themes are automatically processed when pushed to `main`:
 - Published to `repo` branch
 - Index updated with new theme metadata
 
+## Hosting your own theme Repo
+
+MyTM theme repo can be hosted on any static hosting.  
+The only key is to make sure the theme archives are accessible via https/http
+
+If you use GitHub or GitLab, you can use CI/CD to automate the process.
+
+### Initialize a repo
+
+Open your terminal & run:
+
+```bash
+mytm repo init <repo_name> # replace <dir_name> with . to use current dir
+```
+
+This will make the `<repo_name>` dir & create necessary files, dirs.
+Also `repo.name` will be added in config.yml.
+
+### Edit the [config.yml](./config.yml)
+
+Available options, Note that all are under `packaging` key:
+
+1. `input-dir`: absolute/relative path of dir containing themes
+2. `output-dir`: absolute/relative path of dir to output processed theme files
+
+3. `archive.max-versions`: maximum number of versions to keep (default: 10)
+4. `archive.src-urls`:
+   - Array of direct URLs to repo's files.  
+     Use `${{theme}}` & `${{file}}` in place of theme name & file name accordingly.
+   - 1st URL should be of this repo.  
+     If 1st one is not accessible, others will be tried in order from top to bottom.
+
+5. `repo.name`: name/id of the repo. Can be any string except 'official'
+6. `repo.index-html`:
+   - If value is false, no index.html will be generated.
+   - Other than any string will be added as index.html's body.
+   - Some varibles are available:
+     1. `${{mytm-repo}}`: URL of the official MyTM repo. This has to be somewhere in body or packager will through error
+     2. `${{themes}}`: List of themes.
+
+### Add Themes
+
+1. Go to 'themes' dir: `cd themes`
+2. Add themes, Follow [this guide](#adding-new-themes).
+3. Go back to repo's root dir: `cd ..`
+4. Run `mytm repo package`
+
+Themes will be made in 'output-dir' set in config (default: 'dist').
+
 ## Related Resources
 
-- **Main Repository**: [soymadip/MyDE](https://github.com/soymadip/MyDE)
-- **Documentation**: [MyDE Wiki](https://soymadip.github.io/MyDE)
-- **Theme Repo**: [Repo Branch](../../tree/repo)
-- **CLI Tool**: [soymadip/MyCTL](https://github.com/soymadip/MyCTL)
+- **MyCTL Repository**: [MyCTL](https://github.com/mydehq/MyCTL)
+- **Documentation**: [MyDE Wiki](https://mydehq.github.io/)
+- **MyDE**: [MyDE](https://github.com/mydehq/MyDE)
 
 ---
 
