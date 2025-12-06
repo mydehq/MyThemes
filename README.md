@@ -146,9 +146,10 @@ Themes will be made in 'output-dir' set in config (default: 'dist').
 
 ## Related Resources
 
-- **MyCTL Repository**: [MyCTL](https://github.com/mydehq/MyCTL)
-- **Documentation**: [MyDE Wiki](https://mydehq.github.io/)
-- **MyDE**: [MyDE](https://github.com/mydehq/MyDE)
+- **MyCTL Repository**: [mydehq/MyCTL](https://github.com/mydehq/MyCTL)
+- **Documentation**: [mydehq/MyDE Wiki](https://mydehq.github.io/)
+- **KireiSakura kit**: [soymadip/KireiSakura-Kit](https://github.com/soymadip/kireisakura-kit)
+- **MyDE Repository**: [mydehq/MyDE](https://github.com/mydehq/MyDE)
 
 ---
 
