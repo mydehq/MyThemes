@@ -24,6 +24,7 @@ jobs:
     outputs:
       theme-archives: ${{ steps.package.outputs.theme-archives }}
       output-dir: ${{ steps.get-config.outputs.output-dir }}
+      publish-branch: ${{ steps.get-config.outputs.publish-branch }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,29 +35,32 @@ jobs:
       - name: Get output directory from config
         id: get-config
         run: |
-          OUTPUT_DIR=$(yq eval '.build.output_dir' config.yml)
+          OUTPUT_DIR=$(yq '.packaging.output_dir' config.yml)
           echo "output-dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
+          
+          PUBLISH_BRANCH="$(yq '.packaging.publish-branch' config.yml)"
+          echo "publish-branch=$PUBLISH_BRANCH" >> $GITHIB_OUTPUT
 
-      - name: Check if repo branch exists
+      - name: Check if publish branch exists
         id: check-branch
         run: |
-          TARGET_BRANCH="repo"
-          TARGET_REF=$(git ls-remote --heads "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" $TARGET_BRANCH)
+          TARGET_BRANCH="${{ steps.get-config.outputs.publish-branch }}"
+          TARGET_REF="$(git ls-remote --heads "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" $TARGET_BRANCH)"
 
           if [ -n "$TARGET_REF" ]; then
-            echo "repo_branch_exists=true" >> "$GITHUB_OUTPUT"
+            echo "publish_branch_exists=true" >> "$GITHUB_OUTPUT"
             echo "✅ Branch '$TARGET_BRANCH' found."
           else
-            echo "repo_branch_exists=false" >> "$GITHUB_OUTPUT"
+            echo "publish_branch_exists=false" >> "$GITHUB_OUTPUT"
             echo "⚠️ Branch '$TARGET_BRANCH' not found."
           fi
 
       - name: Checkout repo branch in subdir
-        if: steps.check-branch.outputs.repo_branch_exists == 'true'
+        if: steps.check-branch.outputs.publish_branch_exists == 'true'
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}
-          ref: repo
+          ref: ${{ steps.get-config.outputs.publish-branch }}
           path: ${{steps.get-config.outputs.output-dir }}
 
       - name: Package themes
@@ -100,21 +104,22 @@ jobs:
           git config user.name "soymadip"
           git config user.email "84225810+soymadip@users.noreply.github.com"
 
-      - name: Check repo branch & switch
+      - name: Check publish branch & switch
         run: |
-          # Check if repo branch exists
-          if git ls-remote --heads origin repo | grep -q repo; then
-            echo "Repo branch exists, checking out..."
-            git checkout repo
-            git pull origin repo
+          # Check if publish branch exists
+          TARGET_BRANCH="${{ steps.get-config.outputs.publish-branch }}"
+          if git ls-remote --heads origin repo | grep -q "$TARGET_BRANCH"; then
+            echo "$TARGET_BRANCH branch exists, checking out..."
+            git checkout "$TARGET_BRANCH"
+            git pull origin "$TARGET_BRANCH"
           else
-            echo "Creating repo branch..."
-            git checkout --orphan repo
+            echo "Creating "$TARGET_BRANCH" branch..."
+            git checkout --orphan "$TARGET_BRANCH"
             git rm -rf .
             rm -rf .github
-            git commit --allow-empty -m "Initialize repo branch"
-            echo "Pushing new repo branch..."
-            git push --set-upstream origin repo
+            git commit --allow-empty -m "Initialize branch"
+            echo "Pushing new branch..."
+            git push --set-upstream origin "$TARGET_BRANCH"
           fi
 
       - name: Publish themes and index
