@@ -117,18 +117,19 @@ Also `repo.name` will be added in config.yml.
 
 Available options, Note that all are under `packaging` key:
 
-1. `input-dir`: absolute/relative path of dir containing themes
-2. `output-dir`: absolute/relative path of dir to output processed theme files
+1. `input-dir`: absolute/relative path of dir containing themes.
+2. `output-dir`: absolute/relative path of dir to output processed theme files.
+3. `publish-branch`: Branch Name to upload the packaged themes.
 
-3. `archive.max-versions`: maximum number of versions to keep (default: 10)
-4. `archive.src-urls`:
+4. `archive.max-versions`: maximum number of versions to keep (default: 10)
+5. `archive.src-urls`:
    - Array of direct URLs to repo's files.  
      Use `${{theme}}` & `${{file}}` in place of theme name & file name accordingly.
    - 1st URL should be of this repo.  
      If 1st one is not accessible, others will be tried in order from top to bottom.
 
-5. `repo.name`: name/id of the repo. Can be any string except 'official'
-6. `repo.index-html`:
+6. `repo.name`: name/id of the repo. Can be any string except 'official'
+7. `repo.index-html`:
    - If value is false, no index.html will be generated.
    - Other than any string will be added as index.html's body.
    - Some varibles are available:
