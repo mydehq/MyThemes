@@ -31,17 +31,45 @@ jobs:
       - name: Setup yq
         uses: mikefarah/yq@master
 
-      - name: Package themes
-        id: package
-        run: |
-          chmod +x scripts/package.sh
-          bash scripts/package.sh
-
       - name: Get output directory from config
         id: get-config
         run: |
           OUTPUT_DIR=$(yq eval '.build.output_dir' config.yml)
           echo "output-dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
+
+      - name: Check if repo branch exists
+        id: check-branch
+        run: |
+          TARGET_BRANCH="repo"
+          TARGET_REF=$(git ls-remote --heads "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" $TARGET_BRANCH)
+
+          if [ -n "$TARGET_REF" ]; then
+            echo "repo_branch_exists=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Branch '$TARGET_BRANCH' found."
+          else
+            echo "repo_branch_exists=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Branch '$TARGET_BRANCH' not found."
+          fi
+
+      - name: Checkout repo branch in subdir
+        if: steps.check-branch.outputs.repo_branch_exists == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: repo
+          path: ${{steps.get-config.outputs.output-dir }}
+
+      - name: Package themes
+        id: package
+        run: |
+
+          # remove the .git dir
+          if [ -d "${{steps.get-config.outputs.output-dir }}/.git" ]; then
+            rm -rf ${{steps.get-config.outputs.output-dir }}/.git
+          fi
+
+          chmod +x scripts/package.sh
+          bash scripts/package.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
