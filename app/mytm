@@ -1,14 +1,12 @@
 #!/bin/env bash
 
-# MyThemes Package Builder
+# MyTM Package Builder
 # Builds theme packages & generates index.json
-
-set -e
 
 # Determine project root directory
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 
-if [[ "$(basename "$PWD")" == "scripts" ]]; then
+if [[ "$(basename "$PWD")" == "app" ]]; then
   PROJECT_ROOT=".."
 else
   PROJECT_ROOT="."
@@ -26,6 +24,7 @@ README_TEMPLATE="$PROJECT_ROOT/src/repo-readme-template.md"
 
 # Source utility functions
 source "$SCRIPT_DIR/.utils.sh"
+source "$SCRIPT_DIR/validation.sh"
 
 if [ -n "$XDG_CACHE_HOME" ]; then
   CACHE_DIR="$XDG_CACHE_HOME/mytm"
@@ -53,9 +52,14 @@ FLAGS:
 EOF
 }
 
-#-------------- entry point ------------------
+# ---------- override confs from config --------
 
-echo
+INPUT_DIR="$(get-conf "input-dir")" || exit 1
+OUTPUT_DIR="$(get-conf "output-dir")" || exit 1
+MAX_ARCHIVE_VERSIONS="$(get-conf "archive.max-versions")" || exit 1
+
+
+#-------------- parse arguments ------------------
 
 # Run main function if script is executed directly
 if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
@@ -94,6 +98,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+
+#------ check/create required cmds/files/dirs --------
+
 has-cmd yq jq tar awk || exit 1
 
 #------ Start Build --------
@@ -102,9 +109,7 @@ has-cmd yq jq tar awk || exit 1
 mkdir -p "$OUTPUT_DIR" "$TEMP_DIR"
 
 # Set up cleanup trap
-cleanup() {
-  rm -rf "$TEMP_DIR"
-}
+cleanup() { rm -rf "$TEMP_DIR"; }
 trap cleanup EXIT
 
 # Initialize themes array, archives list, theme_count

@@ -147,7 +147,6 @@ validate-index() {
 
     # All good
     log.success "index.json is valid"
-    return 0
 }
 
 # Usage: validate-versions-json [versions_json_path]
