@@ -20,7 +20,7 @@ _tab() {
     local indent=""
     if [ "$_LOG_TAB" -gt 0 ]; then
         for ((i=0; i<$_LOG_TAB; i++)); do
-            indent+="   "
+            indent+="    "
         done
         printf "%s" "$indent"
     fi
@@ -131,7 +131,7 @@ get-theme-ver() {
     local theme_yml="$1"
     local version
 
-    version=$(yq eval '.version' "$theme_yml" 2>/dev/null | tr -d '\0') || {
+    version=$(yq '.version' "$theme_yml" 2>/dev/null | tr -d '\0') || {
         log.error "Failed to get theme version from $theme_yml"
         return 1
     }
@@ -177,11 +177,9 @@ get-file-size() {
 }
 
 # Calculate total size of theme files and index.json
-show-repo-summary() {
+show-repo-size() {
     local output_dir="$1"
     local total_bytes=0
-    local file_count=0
-    local index_size=0
 
     [ -z "$output_dir" ] && {
         log.error "Output directory not specified"
@@ -195,38 +193,18 @@ show-repo-summary() {
 
     # Calculate index.json size
     if [ -f "$output_dir/index.json" ]; then
-        index_size=$(get-file-size "$output_dir/index.json")
+        local index_size=$(get-file-size "$output_dir/index.json")
         total_bytes=$((total_bytes + index_size))
     fi
 
-    # Calculate theme archive sizes
-    for archive in "$output_dir"/*.tar.gz; do
-        [ -f "$archive" ] || continue
-        local size=$(get-file-size "$archive")
+    # Calculate all theme files (archives and .versions.json)
+    while IFS= read -r -d '' file; do
+        local size=$(get-file-size "$file")
         total_bytes=$((total_bytes + size))
-        file_count=$((file_count + 1))
-    done
+    done < <(find "$output_dir" -type f \( -name "*.tar.gz" -o -name ".versions.json" \) -print0)
 
-    if [ "$file_count" -eq 0 ]; then
-        log.error "No theme archives found in $output_dir"
-        return 1
-    fi
-
-    # Show total first with colors
-    echo -e "${GREEN}Repo Size = $(format-size "$total_bytes")${NC}"
-    echo
-
-    echo "Files:"
-    # Show individual file sizes
-    if [ -f "$output_dir/index.json" ]; then
-        printf "   "; echo -e "${BLUE}index.json: ${GREEN}$(format-size "$index_size")${NC}"
-    fi
-
-    for archive in "$output_dir"/*.tar.gz; do
-        [ -f "$archive" ] || continue
-        local size=$(get-file-size "$archive")
-        printf "   "; echo -e "${BLUE}$(basename "$archive"): ${GREEN}$(format-size "$size")${NC}"
-    done
+    # Show total repository size
+    echo -e "Repo Size = $(format-size "$total_bytes")"
 }
 
 # Usage: gen-hash <file> <md5|sha1|sha256|sha512>

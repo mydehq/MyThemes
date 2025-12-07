@@ -5,14 +5,13 @@ validate-theme-dir() {
    local theme_dir="$1"
    local theme_yml="$theme_dir/theme.yml"
 
-   log.warn "Work in Progress." && return 1
-
    # Validate theme directory
    ! [ -d "$theme_dir" ] && {
       log.error "Theme dir '$theme_dir' does not exist"
       return 1
    }
 
+   # -------------- Manifest ----------------
    # Validate theme.yml file
    ! [ -f "$theme_yml" ] && {
       log.error "Theme dir '$theme_dir' does not contain a theme.yml"
@@ -24,11 +23,21 @@ validate-theme-dir() {
       log.error "theme.yml is empty in '$theme_dir'."
       return 1
    }
+   log.success "Has valid Mainfest"
 
+   # --------------- Check values --------------
+   # Extract ver
    get-theme-ver "$theme_yml" >/dev/null || {
         log.error "Theme version not found"
         return 1
    }
+
+   # check for semantic versioning
+   get-theme-ver "$theme_yml" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || {
+        log.error "Theme version is not a semantic version"
+        return 1
+   }
+   log.success "Has valid version"
 }
 
 
@@ -146,7 +155,7 @@ validate-index() {
     fi
 
     # All good
-    log.success "index.json is valid"
+    return 0
 }
 
 # Usage: validate-versions-json [versions_json_path]
