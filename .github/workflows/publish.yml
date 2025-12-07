@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write # Necessary for pushing to the repo branch
+  contents: write
 
 jobs:
   package-and-publish:

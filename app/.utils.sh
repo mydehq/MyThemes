@@ -13,6 +13,8 @@ NC='\033[0m'
 
 #------------ Logging Functions ------------------
 
+log.debug() { printf "" >/dev/null; }
+
 log.info() { echo -e "${BLUE}!${NC} $1" >&2; }
 
 log.success() { echo -e "${GREEN}✔️${NC} $1" >&2; }
@@ -201,4 +203,150 @@ show-repo-summary() {
         local size=$(get-file-size "$archive")
         printf "   "; echo -e "${BLUE}$(basename "$archive"): ${GREEN}$(format-size "$size")${NC}"
     done
+}
+
+# Usage: gen-hash <file> <md5|sha1|sha256|sha512>
+# Prints the hex digest.
+# Returns 0 on success; non-zero on error.
+gen-hash() {
+    local file="$1"
+    local algo="${2:-sha256}"
+
+    if [ -z "$file" ] || [ -z "$algo" ]; then
+        log.error "Usage: gen-hash <file> <md5|sha1|sha256|sha512>"
+        return 1
+    fi
+
+    if [ ! -f "$file" ]; then
+        log.error "File not found: $file"
+        return 1
+    fi
+
+    # Normalize algorithm
+    algo="$(echo "$algo" | tr '[:upper:]' '[:lower:]')"
+
+    case "$algo" in
+        md5)
+            if has-cmd md5sum; then
+                md5sum "$file" | awk '{print $1}'
+                return $?
+            elif has-cmd "md5 -q"; then
+                md5 -q "$file"
+                return $?
+            else
+                log.error "md5 hashing tool not found (need md5sum or md5)"
+                return 1
+            fi
+            ;;
+        sha1)
+            if has-cmd sha1sum; then
+                sha1sum "$file" | awk '{print $1}'
+                return $?
+            elif has-cmd "shasum -a 1"; then
+                shasum -a 1 "$file" | awk '{print $1}'
+                return $?
+            else
+                log.error "sha1 hashing tool not found (need sha1sum or shasum)"
+                return 1
+            fi
+            ;;
+        sha256)
+            if has-cmd sha256sum; then
+                sha256sum "$file" | awk '{print $1}'
+                return $?
+            elif has-cmd "shasum -a 256"; then
+                shasum -a 256 "$file" | awk '{print $1}'
+                return $?
+            else
+                log.error "sha256 hashing tool not found (need sha256sum or shasum)"
+                return 1
+            fi
+            ;;
+        sha512)
+            if has-cmd sha512sum; then
+                sha512sum "$file" | awk '{print $1}'
+                return $?
+            elif has-cmd "shasum -a 512"; then
+                shasum -a 512 "$file" | awk '{print $1}'
+                return $?
+            else
+                log.error "sha512 hashing tool not found (need sha512sum or shasum)"
+                return 1
+            fi
+            ;;
+        *)
+            log.error "Unsupported hash algorithm: $algo"
+            return 1
+            ;;
+    esac
+}
+
+
+# Usage:
+#   compare-hash --f1 <path>|--h1 <hex> --f2 <path>|--h2 <hex> [--algo|-a <algo>]
+# Exactly one of --f1/--h1 and one of --f2/--h2 must be provided.
+# Returns 0 if hashes match, 1 otherwise.
+compare-hash () {
+    local file1=""
+    local file2=""
+    local algo="sha256"
+    local hash_input=""
+    local hash_input2=""
+
+    # require exactly one of --f1/--h1 and one of --f2/--h2
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --f1) file1="$2"; shift 2;;
+            --f2) file2="$2"; shift 2;;
+            --h1) hash_input="$2"; shift 2;;
+            --h2) hash_input2="$2"; shift 2;;
+            --algo|-a) algo="$2"; shift 2;;
+            --help)
+                echo "Usage:"
+                echo "  compare-hash --f1 <path>|--h1 <hex> --f2 <path>|--h2 <hex> [--algo|-a <algo>]"
+                return 0;;
+            *)
+                log.error "Unknown argument: $1"
+                return 1;;
+        esac
+    done
+
+    # Exclusivity checks per side
+    if { [ -n "$file1" ] && [ -n "$hash_input" ]; } || { [ -z "$file1" ] && [ -z "$hash_input" ]; }; then
+        log.error "Exactly one of --f1 or --h1 must be provided"
+        return 1
+    fi
+    if { [ -n "$file2" ] && [ -n "$hash_input2" ]; } || { [ -z "$file2" ] && [ -z "$hash_input2" ]; }; then
+        log.error "Exactly one of --f2 or --h2 must be provided"
+        return 1
+    fi
+
+    # Normalize algo
+    algo="$(echo "$algo" | tr '[:upper:]' '[:lower:]')"
+
+    local h1 h2
+
+    # Compute or accept side 1 hash
+    if [ -n "$hash_input" ]; then
+        h1="$hash_input"
+    else
+        if [ -z "$file1" ] || [ ! -f "$file1" ]; then
+            log.error "File not found: $file1"
+            return 1
+        fi
+        h1="$(gen-hash "$file1" "$algo")" || return 1
+    fi
+
+    # Compute or accept side 2 hash
+    if [ -n "$hash_input2" ]; then
+        h2="$hash_input2"
+    else
+        if [ -z "$file2" ] || [ ! -f "$file2" ]; then
+            log.error "File not found: $file2"
+            return 1
+        fi
+        h2="$(gen-hash "$file2" "$algo")" || return 1
+    fi
+
+    [ "$h1" = "$h2" ]
 }
