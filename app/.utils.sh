@@ -308,3 +308,31 @@ compare-hash () {
 
     [ "$h1" = "$h2" ]
 }
+
+# Usage: validate-json <json_path>
+validate-json() {
+    local json_path="${1:-null}"
+
+    if [ "$json_path" == "null" ]; then
+        log.error "Json path is required"
+        return 1
+    fi
+
+    # Basic existence and size checks
+    if ! [ -f "$json_path" ]; then
+        log.error "index.json not found at '$json_path'"
+        return 1
+    fi
+
+    if ! [ -s "$json_path" ]; then
+        log.error "index.json is empty"
+        return 1
+    fi
+
+    # Validate JSON parse
+    if ! jq -e . "$json_path" >/dev/null 2>&1; then
+        log.error "index.json contains invalid JSON"
+        return 1
+    fi
+}
+

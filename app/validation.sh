@@ -91,23 +91,10 @@ validate-index() {
     local index_json_path="${1:-${OUTPUT_DIR:-./dist}/index.json}"
     local has_errors=0
 
-    # Basic existence and size checks
-    if ! [ -f "$index_json_path" ]; then
-        log.error "index.json not found at '$index_json_path'"
+    if ! validate-json "$index_json_path"; then
         return 1
     fi
 
-    if ! [ -s "$index_json_path" ]; then
-        log.error "index.json is empty"
-        return 1
-    fi
-    log.success "Found index.json"
-
-    # Validate JSON parse
-    if ! jq -e . "$index_json_path" >/dev/null 2>&1; then
-        log.error "index.json contains invalid JSON"
-        return 1
-    fi
     log.success "Has valid JSON"
 
     # --------------- Check required fields --------------
