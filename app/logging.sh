@@ -46,7 +46,8 @@ log.tab.reset() {
 # Usage: _log -l <level> [-b|--bold] <message>
 # Levels: debug, info, success, warn, error, fatal
 _log() {
-    local level="" bold_flag=false bold="" message="" color="" icon=""
+    local level="" return_code=0 \
+          bold_flag=false bold="" message="" color="" icon=""
 
     # Parse arguments
     while [ "$#" -gt 0 ]; do
@@ -83,11 +84,13 @@ _log() {
         error)
             color="${RED}"
             icon="✗"
+            return_code=1
             ;;
         fatal)
             bold_flag=true
             color="${RED}"
             icon="✗"
+            return_code=1
             ;;
         ask)
             color="${YELLOW}"
@@ -123,9 +126,9 @@ _log() {
         _tab; echo -e "${color}${icon}${NC} ${bold}${message}${NC}" >&2
     fi
 
+    [ "$level" = "fatal" ] && exit ${return_code}
 
-    # Exit for fatal
-    [ "$level" = "fatal" ] && exit 1
+    return ${return_code}
 }
 
 #------------ Public API ------------------
