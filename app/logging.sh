@@ -98,7 +98,7 @@ _log() {
             ;;
         *)
             color="${NC}"
-            icon="?"
+            icon=" "
             ;;
     esac
 
@@ -118,4 +118,3 @@ log.success() { _log -l success "$@"; }
 log.warn()    { _log -l warn "$@"; }
 log.error()   { _log -l error "$@"; }
 log.fatal()   { _log -l fatal "$@"; }
-
