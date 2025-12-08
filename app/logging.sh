@@ -119,3 +119,54 @@ log.warn()    { _log -l warn "$@"; }
 log.error()   { _log -l error "$@"; }
 log.fatal()   { _log -l fatal "$@"; }
 
+
+#-------------------- Prompt Method --------------------
+
+# Interactive Prompt function
+# Usage: log.ask [-d <default>] <message>
+# Flags:
+#     -d,--default <val>  default value (shown inline, returned if user presses Enter)
+# Returns: user input (or default value, or empty string)
+log.ask()     {
+    local default_value="" message=""
+
+    # Parse arguments
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            -d|--default)
+                if [ -z "$2" ]; then
+                    echo "Error: -d/--default requires a value" >&2
+                    return 1
+                fi
+                default_value="$2"
+                shift 2
+                ;;
+            *)
+                message="$1"
+                shift
+                ;;
+        esac
+    done
+
+    # Build message with default if provided
+    local full_message="$message"
+    if [ -n "$default_value" ]; then
+        full_message="$full_message [default: $default_value]"
+    fi
+
+    # Use _log for consistent prompt display
+    _log -l ask -b "$full_message"
+
+    # Print input prompt on next line
+    _tab; echo -ne "=> " >&2
+
+    # Read response from stdin
+    read -r response
+
+    # Return default if empty input and default is set
+    if [ -z "$response" ] && [ -n "$default_value" ]; then
+        echo "$default_value"
+    else
+        echo "$response"
+    fi
+}
