@@ -32,10 +32,10 @@ validate-theme-dir() {
    theme_version="$(yq '.version' "$theme_yml" 2>/dev/null | tr -d '\0')"
 
    if [ -z "$theme_version" ] || [ "$theme_version" == "null" ]; then
-        log.error "Missing required field: 'version'"
+        log.error "Missing required field: ${YELLOW}'version'${NC}"
         has_errors=1
    elif ! echo "$theme_version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-        log.error "Invalid 'version': must be semantic version X.Y.Z"
+        log.error "Invalid ${YELLOW}'version'${NC}: ${BLUE}must be semantic X.Y.Z${NC}"
         has_errors=1
    else
         log.success "Has valid version"
@@ -46,7 +46,7 @@ validate-theme-dir() {
    theme_author="$(yq '.author' "$theme_yml" 2>/dev/null | tr -d '\0')"
 
    if [ -z "$theme_author" ] || [ "$theme_author" == "null" ]; then
-        log.error "Missing required field: 'author'"
+        log.error "Missing required field: ${YELLOW}'author'${NC}"
         has_errors=1
    else
         log.success "Has valid author"
@@ -57,10 +57,10 @@ validate-theme-dir() {
    theme_url="$(yq '.url' "$theme_yml" 2>/dev/null | tr -d '\0')"
 
    if [ -z "$theme_url" ] || [ "$theme_url" == "null" ]; then
-        log.error "Missing required field: 'url'"
+        log.error "Missing required field: ${YELLOW}'url'${NC}"
         has_errors=1
    elif ! echo "$theme_url" | grep -qE '^https?://'; then
-        log.error "Invalid 'url': must start with http:// or https://"
+        log.error "Invalid ${YELLOW}'url'${NC}: ${BLUE}must start with http:// or https://${NC}"
         has_errors=1
    else
         log.success "Has valid URL"
@@ -71,10 +71,10 @@ validate-theme-dir() {
    config_check="$(yq '.config' "$theme_yml" 2>/dev/null)"
 
    if [ -z "$config_check" ] || [ "$config_check" == "null" ]; then
-        log.error "Missing required field: 'config'"
+        log.error "Missing required field: ${YELLOW}'config'${NC}"
         has_errors=1
    elif ! yq -e '.config | type' "$theme_yml" 2>/dev/null | grep -q 'map'; then
-        log.error "Invalid 'config' field: must be an object/map"
+        log.error "Invalid ${YELLOW}'config'${NC} field: ${BLUE}must be an object/map${NC}"
         has_errors=1
    else
         log.success "Has valid config object"
