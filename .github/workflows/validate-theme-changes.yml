@@ -2,13 +2,16 @@ name: Validate Theme Changes
 
 on:
   pull_request:
+    branches:
+      - main
     paths:
       - "themes/**"
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   validate-themes:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
