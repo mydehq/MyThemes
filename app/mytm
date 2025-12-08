@@ -233,26 +233,22 @@ if ! echo "$repo_src_urls" | jq -e 'all( .[] ; (contains("${{theme}}") and conta
     log.fatal "All source URLs must contain \${{theme}} and \${{file}}."
 fi
 
-# Create index.json
-jq -n \
-    --arg repo_name "$repo_name" \
-    --argjson release_time "$repo_release_time" \
-    --argjson repo_src_urls "$repo_src_urls" \
-    '{
-        schema_ver: 2,
-        repo_name: $repo_name,
-        release: $release_time,
-        src_urls: $repo_src_urls,
-        themes: {}
-    }' \
-> "${OUTPUT_DIR}/index.json" || log.fatal "Failed to create index.json"
+        # Recreate Index
+        log.info "Creating new index..."
 
-log.success "Done"
+        if create-repo-index \
+                -rn "$repo_name" \
+                -rt "$repo_release_time" \
+                -su "$repo_src_urls" \
+                -th "$old_index_themes" \
+                -o  "${OUTPUT_DIR}/index.json"; then
 
-log.tab.reset
-log.success -b "Environment setup complete\n"
-
-#-------------- Package Themes --------------
+            log.success "Done"
+        else
+            log.fatal "Failed"
+        fi
+    fi
+fi
 
 log.info -b "Packaging themes..."
 log.tab.inc

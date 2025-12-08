@@ -336,3 +336,105 @@ validate-json() {
     fi
 }
 
+
+# Usage: create-repo-index -rn <repo_name> -rt <release_time> -su <src_urls> [-th <theme_object>] [-o <output_file>]
+# Flags:
+#   -rn|--repo-name <repo_name>        Repository name (e.g., "official")
+#   -rt|--release-time <timestamp>     Repository release time (UNIX timestamp)
+#   -su|--src-urls <json_array>        Source URLs as JSON array (must contain ${{theme}} and ${{file}})
+#   -th|--theme-obj <json_object>      Theme object as JSON (optional, defaults to {})
+#   -o|--output-file <file_path>       Output file path (optional, defaults to $OUTPUT_DIR/index.json)
+#
+create-repo-index() {
+    local repo_name=""
+    local repo_release_time=""
+    local repo_src_urls=""
+    local theme_object=""
+    local output_file=""
+
+    # Parse flags
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -rn|--repo-name)
+                repo_name="$2"
+                shift 2
+                ;;
+            -rt|--release-time)
+                repo_release_time="$2"
+                shift 2
+                ;;
+            -su|--src-urls)
+                repo_src_urls="$2"
+                shift 2
+                ;;
+            -th|--theme-obj)
+                theme_object="$2"
+                shift 2
+                ;;
+            -o|--output-file)
+                output_file="$2"
+                shift 2
+                ;;
+            -h|--help)
+                echo "Usage: create-repo-index -rn <repo_name> -rt <release_time> -su <src_urls> [-th <theme_object>] [-o <output_file>]"
+                echo "Flags:"
+                echo "  -rn|--repo-name <repo_name>        Repository name (e.g., 'official')"
+                echo "  -rt|--release-time <timestamp>     Repository release time (UNIX timestamp)"
+                echo "  -su|--src-urls <json_array>        Source URLs as JSON array"
+                echo "  -th|--theme-obj <json_object>      Theme object as JSON (optional, defaults to {})"
+                echo "  -o|--output-file <file_path>       Output file path (optional, defaults to \$OUTPUT_DIR/index.json)"
+                return 0
+                ;;
+            *)
+                log.error "Unknown flag: $1"
+                log.error "Use -h or --help for usage information"
+                return 1
+                ;;
+        esac
+    done
+
+    # Set default values if not provided
+    if [ -z "$output_file" ]; then
+        output_file="${OUTPUT_DIR}/index.json"
+    fi
+    if [ -z "$theme_object" ]; then
+        theme_object="{}"
+    fi
+
+    # Validate required arguments
+    if [ -z "$repo_name" ] || [ -z "$repo_release_time" ] || [ -z "$repo_src_urls" ]; then
+        log.error "Missing required arguments"
+        log.error "Use -h or --help for usage information"
+        return 1
+    fi
+
+    # --- 1. Validation Check ---
+    # Check if all URLs in the provided JSON array contain ${{theme}} and ${{file}}.
+    if ! echo "$repo_src_urls" | jq -e 'all( .[] ; (contains("${{theme}}") and contains("${{file}}")) )' > /dev/null; then
+        log.fatal "All source URLs must contain \${{theme}} and \${{file}}."
+    fi
+
+    # --- 2. Create index.json ---
+    # Create the index.json file using jq to construct the object.
+    # Use --argjson for numeric and array inputs to maintain data type integrity.
+    jq -n \
+        --arg repo_name "$repo_name" \
+        --argjson release_time "$repo_release_time" \
+        --argjson repo_src_urls "$repo_src_urls" \
+        --argjson theme_object "$theme_object" \
+        '{
+            schema_ver: 2,
+            repo_name: $repo_name,
+            release: $release_time,
+            src_urls: $repo_src_urls,
+            themes: $theme_object
+        }' \
+    > "$output_file"
+
+    # Check the exit status of the final jq command
+    if [ $? -eq 0 ]; then
+        return 0 # Success
+    else
+        log.fatal "Failed to create $output_file due to a jq error."
+    fi
+}
