@@ -6,10 +6,15 @@ validate-theme-dir() {
    local has_errors=0
 
    # Validate theme directory
-   ! [ -d "$theme_dir" ] && {
-      log.error "Theme dir '$theme_dir' does not exist"
-      return 1
-   }
+   if [ ! -e "$theme_dir" ]; then
+        log.error "Theme dir '$theme_dir' does not exist"
+        return 1
+   fi
+   
+   if [ ! -d "$theme_dir" ]; then
+        log.error "'$theme_dir' is not a directory"
+        return 1
+   fi
 
    # -------------- Manifest ----------------
    # Validate theme.yml file
