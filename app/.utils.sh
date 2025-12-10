@@ -170,8 +170,11 @@ gen-hash() {
     local file="$1"
     local algo="${2:-sha256}"
 
-    if [ -z "$file" ] || [ -z "$algo" ]; then
-        log.error "Usage: gen-hash <file> <md5|sha1|sha256|sha512>"
+    if [ -z "$file" ]; then
+        log.error "File not specified"
+        return 1
+    elif [ -z "$algo" ]; then
+        log.error "Algorithm not specified"
         return 1
     fi
 

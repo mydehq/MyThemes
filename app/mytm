@@ -412,20 +412,26 @@ for theme_dir in "${INPUT_DIR}"/*; do
            YQI_VER="$theme_version"
 
     # Check if theme and latest version exist
+    _should_update=false
+    _update_msg=""
     _existing_version=$(jq -r --arg theme "$theme_name" '.themes[$theme].latest // ""' "$OUTPUT_DIR/index.json" 2>/dev/null)
-    _yq_insert_cmd="yq -i '.themes.[env(YQI_THM)].latest = env(YQI_VER)' \"$OUTPUT_DIR/index.json\""
 
     if [ -z "$_existing_version" ]; then
-        eval "$_yq_insert_cmd"
-        log.success "Added to Repository Index"
-        is_added=1
+        _should_update=true
+        _update_msg="Added to Repository Index"
+    elif [ "$_existing_version" != "$theme_version" ]; then
+        _should_update=true
+        _update_msg="Updated Repository Index: ${_existing_version} → ${theme_version}"
     else
-        if [ "$_existing_version" != "$theme_version" ]; then
-            eval "$_yq_insert_cmd"
-            log.success "Updated Repository Index: ${_existing_version} → ${theme_version}"
+        log.success "Already in Repository Index"
+    fi
+
+    if [ "$_should_update" = true ]; then
+        if yq -i ".themes[\"$theme_name\"].latest = \"$theme_version\"" "$OUTPUT_DIR/index.json"; then
+            log.success "$_update_msg"
             is_added=1
         else
-            log.success "Already in Repository Index"
+            log.fatal "Failed to update Repository Index"
         fi
     fi
 
@@ -444,7 +450,6 @@ for theme_dir in "${INPUT_DIR}"/*; do
     else
         log.info -b "Skipped theme: $theme_name ($theme_version)\n"
     fi
-
 done
 
 log.tab.reset
