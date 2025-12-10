@@ -95,6 +95,9 @@ jobs:
           OUTPUT_DIR="${{ steps.get-config.outputs.output-dir }}"
           PUBLISH_BRANCH="${{ steps.get-config.outputs.publish-branch }}"
 
+          git config user.name "soymadip"
+          git config user.email "84225810+soymadip@users.noreply.github.com"
+
           # Navigate into the nested repository
           cd "$OUTPUT_DIR"
 
