@@ -158,7 +158,7 @@ done
 log.info -b "Checking up environment..."
 log.tab.inc
 
-req_cmds="yq jq tar awk"
+req_cmds="yq jq tar tr awk"
 
 has-cmd $req_cmds || { log.fatal "Please install required commands"; }
 log.success "Available: $req_cmds"
@@ -184,11 +184,8 @@ if [ "$VALIDATE_ONLY" != "true" ]; then
     if [ -d "$OUTPUT_DIR" ]; then
         log.success "Output dir exists: $OUTPUT_DIR/"
     else
-       if mkdir -p "$OUTPUT_DIR"; then
-           log.success "Made output dir: $OUTPUT_DIR/"
-       else
-           log.fatal "Failed to create output or temp directory"
-       fi
+       mkdir -p "$OUTPUT_DIR" || log.fatal "Failed to create output or temp directory"
+       log.success "Made output dir: $OUTPUT_DIR/"
     fi
 else
     log.info "Skipping output dir creation"
@@ -268,7 +265,7 @@ if [ -f "${OUTPUT_DIR}/index.json" ]; then
     else
         log.tab.dec
         log.error "Index is invalid"
-        
+
         # Remove invalid index
         if rm "${OUTPUT_DIR}/index.json"; then
             log.success "Removed Invalid Index"
@@ -458,13 +455,13 @@ for theme_dir in "${INPUT_DIR}"/*; do
 
     log.tab.dec
     if [ "$is_added" -eq 1 ]; then
-        added_themes+=("$archive_path")
-        ((added_theme_count++))
+        added_themes+=("$archive_path") && ((added_theme_count++))
         log.success -b "${GREEN}Added theme: $theme_name ($theme_version)$NC\n"
+
     elif [ "$is_updated" -eq 1 ]; then
-        updated_themes+=("$archive_path")
-        ((updated_theme_count++))
+        updated_themes+=("$archive_path") && ((updated_theme_count++))
         log.success -b "${BLUE}Updated theme: $theme_name ($theme_version)$NC\n"
+
     else
         log.info -b "Skipped theme: $theme_name ($theme_version)\n"
     fi
