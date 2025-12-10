@@ -61,6 +61,15 @@ EOF
 
 clean-tmp() { rm -rf "$TEMP_DIR"; }
 
+package-theme() {
+    local theme_dir="$1"
+    local archive_path="$2"
+
+    if ! tar -czf "$archive_path" -C "$theme_dir" .; then
+        log.fatal "Failed to package archive: '$theme_name'"
+    fi
+}
+
 show-list() {
     local color="$1"
     shift
@@ -342,10 +351,10 @@ for theme_dir in "${INPUT_DIR}"/*; do
     # Create Archive
     if [ -f "$archive_path" ]; then
         log.success "Theme archive exists"
+        new_archive_created=false
     else
-        if ! tar -czf "$archive_path" -C "$theme_dir" .; then
-            log.fatal "Failed to package archive: '$theme_name'"
-        fi
+        package-theme "$theme_dir" "$archive_path" || exit 1
+        new_archive_created=true
     fi
     log.success "Packing Done"
 
@@ -363,45 +372,54 @@ for theme_dir in "${INPUT_DIR}"/*; do
     #-------------- Update .versions.json ----------------
 
     versions_file="${OUTPUT_DIR}/$theme_name/.versions.json"
-    jq_tmp_file="$TEMP_DIR/.versions-$theme_name.json"
 
     if [ ! -f "$versions_file" ]; then
         echo "[]" > "$versions_file"
     fi
 
+    export YQ_I_VER="$theme_version" \
+           YQ_I_HASH="$archive_hash" \
+           YQ_I_ALGO="$HASH_ALGO"
+
     # Check if version already exists
     if jq -e --arg ver "$theme_version" 'any(.[]; .ver == $ver)' "$versions_file" > /dev/null; then
+
         # Version exists, check if hash changed
         existing_hash=$(jq -r --arg ver "$theme_version" '.[] | select(.ver == $ver) | .hash.value' "$versions_file")
 
         if [ "$existing_hash" != "$archive_hash" ]; then
 
-            # Hash changed, update it & algo
-            export YQ_VER="$theme_version" \
-                   YQ_HASH="$archive_hash" \
-                   YQ_ALGO="$HASH_ALGO"
+            if [ "$new_archive_created" != true ]; then
+                log.tab.inc
+                log.warn "Hash doesn't match with versions index"
+                log.info "Repacking theme..."
 
-            if yq -i '(.[] | select(.ver == env(YQ_VER)) | .hash.value) = env(YQ_HASH)' "$versions_file" && \
-               yq -i '(.[] | select(.ver == env(YQ_VER)) | .hash.algo) = env(YQ_ALGO)' "$versions_file"; then
+                rm -rf "$archive_path"                     || log.fatal "Failed to remove old archive"
+                package-theme "$theme_dir" "$archive_path" ||  exit 1
+                archive_hash="$(gen-hash "$archive_path")" || log.fatal "Failed to generate hash for new archive"
+
+                log.success "Done"
+                log.tab.dec
+            fi
+
+            # Update Hash in version index
+            if yq -i '(.[] | select(.ver == env(YQ_I_VER)) | .hash.value) = env(YQ_I_HASH)' "$versions_file" && \
+               yq -i '(.[] | select(.ver == env(YQ_I_VER)) | .hash.algo) = env(YQ_I_ALGO)' "$versions_file"; then
                 log.success "Updated hash in versions index"
                 is_updated=1
             else
-                log.fatal "Failed to update hash in versions index"
+                log.fatal "Failed to update hash in version's index"
             fi
         else
-            log.success "Entry exists in versions index"
+            log.success "Entry exists in version's index"
         fi
     else
         # Version doesn't exist, add it
-        export YQ_VER="$theme_version" \
-               YQ_HASH="$archive_hash" \
-               YQ_ALGO="$HASH_ALGO"
-
-        if yq -i '. = [{"ver": env(YQ_VER), "hash": {"value": env(YQ_HASH), "algo": env(YQ_ALGO)}}] + .' "$versions_file"; then
-            log.success "Updated versions index"
+        if yq -i '. = [{"ver": env(YQ_I_VER), "hash": {"value": env(YQ_I_HASH), "algo": env(YQ_I_ALGO)}}] + .' "$versions_file"; then
+            log.success "Updated version's index"
             is_added=1
         else
-            log.fatal "Failed to update versions index"
+            log.fatal "Failed to update version's index"
         fi
     fi
 
