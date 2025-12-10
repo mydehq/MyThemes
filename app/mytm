@@ -470,12 +470,42 @@ log.success -b "${GREEN}Packaging complete${NC}\n"
 log.info -b "Cleaning up..."
 log.tab.inc
 
+# Clean up stale themes
+if [ -f "$OUTPUT_DIR/index.json" ]; then
+    log.info "Checking for stale themes..."
+
+    # Get all themes from index
+    indexed_themes=$(jq -r '.themes | keys | .[]' "$OUTPUT_DIR/index.json")
+
+    log.tab.inc
+    for theme in $indexed_themes; do
+        if [ ! -d "$INPUT_DIR/$theme" ]; then
+
+            log.info "Found stale: $theme"
+
+            export YQ_I_THEME="$theme"
+            yq -i 'del(.themes[env(YQ_I_THEME)])' "$OUTPUT_DIR/index.json"
+
+            # Remove output theme directory
+            if [ -d "$OUTPUT_DIR/$theme" ]; then
+                rm -rf "${OUTPUT_DIR:?}/${theme:?}" || log.error "Couldn't Remove theme dir: $theme"
+            fi
+
+            log.success "Removed"
+        fi
+    done
+    log.tab.dec
+    log.success "Done"
+fi
+
 # Temporary dir
+log.info "Removing Temporary files"
 if clean-tmp; then
-    log.success "Temporary files"
+    log.success "Removed"
 else
     log.error "Failed to clean up temporary files"
 fi
+
 
 log.tab.dec
 log.success "Cleanup Complete\n"
