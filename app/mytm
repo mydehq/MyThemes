@@ -112,9 +112,7 @@ MAX_ARCHIVE_VERSIONS="$(get-conf "archive.max-versions")" || exit 1
 #-------------- parse arguments ------------------
 
 # Run main function if script is executed directly
-if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
-  log.fatal "This script should not be sourced."
-fi
+[[ "${BASH_SOURCE[0]}" != "${0}" ]] && log.fatal "This script should not be sourced."
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -160,9 +158,9 @@ log.tab.inc
 
 req_cmds="yq jq tar tr awk"
 
+#shellcheck disable=SC2086
 has-cmd $req_cmds || { log.fatal "Please install required commands"; }
 log.success "Available: $req_cmds"
-
 
 if [ -d "$INPUT_DIR" ]; then
     log.success "Found Input dir: $INPUT_DIR/"
@@ -208,9 +206,7 @@ if [ "$VALIDATE_ONLY" == "true" ]; then
     if [[ -n "$VALIDATE_THEME" ]]; then
         log.info "Validating theme: $VALIDATE_THEME"
         log.tab.inc
-        if ! validate-theme-dir "$INPUT_DIR/$VALIDATE_THEME"; then
-            validation_failed=1
-        fi
+        validate-theme-dir "$INPUT_DIR/$VALIDATE_THEME" || validation_failed=1
         log.tab.dec
     else
         for theme_dir in "$INPUT_DIR"/*; do
@@ -360,9 +356,7 @@ for theme_dir in "${INPUT_DIR}"/*; do
     fi
 
     # Generate hash
-    archive_hash="$(gen-hash "$archive_path")" || {
-        log.fatal "Failed to generate hash for: '$archive_path'"
-    }
+    archive_hash="$(gen-hash "$archive_path")" || log.fatal "Failed to generate hash for: '$archive_path'"
     log.success "Generated $HASH_ALGO hash"
 
 
