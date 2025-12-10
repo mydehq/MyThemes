@@ -6,8 +6,8 @@ on:
     paths:
       - .github/workflows/publish.yml
       - "config.yml"
-      - "themes/*"
-      - "scripts/*"
+      - "themes/**"
+      - "app/mytm"
 
   workflow_dispatch:
 
@@ -19,126 +19,110 @@ permissions:
   contents: write
 
 jobs:
-  compile:
+  package-and-publish:
     runs-on: ubuntu-latest
-    outputs:
-      theme-archives: ${{ steps.package.outputs.theme-archives }}
-      output-dir: ${{ steps.get-config.outputs.output-dir }}
     steps:
-      - name: Checkout repository
+      - name: Checkout primary repository (main branch)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup yq
         uses: mikefarah/yq@master
+
+      - name: Get configuration variables
+        id: get-config
+        run: |
+          OUTPUT_DIR="$(yq '.packaging.output-dir' config.yml)" || exit 1
+          echo "output-dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
+
+          PUBLISH_BRANCH="$(yq '.packaging.publish-branch' config.yml)" || exit 1
+          echo "publish-branch=$PUBLISH_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Configure Git Credentials (Initial setup)
+        run: |
+          # Use the GITHUB_TOKEN to authenticate push operations
+          GIT_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git remote set-url origin $GIT_URL
+          git config user.name "soymadip"
+          git config user.email "84225810+soymadip@users.noreply.github.com"
+
+      - name: Check & create publish branch
+        id: check-branch
+        run: |
+          TARGET_BRANCH="${{ steps.get-config.outputs.publish-branch }}"
+
+          # Check if branch exists on remote
+          if git ls-remote --heads origin "$TARGET_BRANCH" | grep -q "$TARGET_BRANCH"; then
+            echo "✅ Branch '$TARGET_BRANCH' found."
+          else
+            echo "⚠️ Branch '$TARGET_BRANCH' not found. Creating it now."
+
+            # Create and initialize the orphan branch
+            if ! git checkout --orphan "$TARGET_BRANCH"; then
+              echo "❌ Failed to create orphan '$TARGET_BRANCH' branch"
+              exit 1
+            fi
+
+            # Clear working directory and commit an empty state
+            git rm -rf .
+            git commit --allow-empty -m "Initialize $TARGET_BRANCH branch"
+
+            # Push the new branch
+            if ! git push origin "$TARGET_BRANCH"; then
+              echo "❌ Failed to push new branch to origin"
+              exit 1
+            fi
+
+            # Switch back to main branch
+            git checkout -
+          fi
+
+      - name: Checkout publish branch into output directory
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.get-config.outputs.publish-branch }}
+          path: ${{ steps.get-config.outputs.output-dir }}
+          fetch-depth: 1
 
       - name: Package themes
         id: package
         run: |
           chmod +x scripts/package.sh
-          bash scripts/package.sh
-
-      - name: Get output directory from config
-        id: get-config
-        run: |
-          OUTPUT_DIR=$(yq eval '.build.output_dir' config.yml)
-          echo "output-dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: theme-archives
-          path: ${{ steps.get-config.outputs.output-dir }}/*
-          retention-days: 30
-
-  publish:
-    runs-on: ubuntu-latest
-    needs: compile
-    if: needs.compile.outputs.theme-archives != ''
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: theme-archives
-          path: ${{ needs.compile.outputs.output-dir }}
-
-      - name: Configure Git
-        run: |
-          git config user.name "soymadip"
-          git config user.email "84225810+soymadip@users.noreply.github.com"
-
-      - name: Check repo branch
-        run: |
-          # Check if repo branch exists
-          if git ls-remote --heads origin repo | grep -q repo; then
-            echo "Repo branch exists, checking out..."
-            git checkout repo
-            git pull origin repo
-          else
-            echo "Creating repo branch..."
-            git checkout --orphan repo
-            git rm -rf .
-            rm -rf .github
-            git commit --allow-empty -m "Initialize repo branch"
-            echo "Pushing new repo branch..."
-            git push --set-upstream origin repo
-          fi
+          bash app/mytm
 
       - name: Publish themes and index
         run: |
-          # Copy everything from output dir
-          cp ${{ needs.compile.outputs.output-dir }}/* . 2>/dev/null || true
+          OUTPUT_DIR="${{ steps.get-config.outputs.output-dir }}"
+          PUBLISH_BRANCH="${{ steps.get-config.outputs.publish-branch }}"
 
-          # Remove output dir
-          rm -rf ${{ needs.compile.outputs.output-dir }}
+          # Navigate into the nested repository
+          cd "$OUTPUT_DIR"
 
-          # Add all files
+          # Add all changed files
           git add .
 
           # Check if there are changes to commit
           if git diff --staged --quiet; then
             echo "No new files to commit"
           else
-            # Create commit message with list of archives
-            echo "Update theme archives and index" > commit_msg.txt
-            echo "" >> commit_msg.txt
-            echo "Themes updated:" >> commit_msg.txt
-            IFS=',' read -ra ARCHIVES <<< "${{ needs.compile.outputs.theme-archives }}"
-            for archive in "${ARCHIVES[@]}"; do
-              echo "- $archive" >> commit_msg.txt
-            done
-            echo "" >> commit_msg.txt
-            echo "Updated repo" >> commit_msg.txt
-            echo "" >> commit_msg.txt
-            echo "Generated from commit: ${{ github.sha }}" >> commit_msg.txt
+            git commit -m "Update themes from ${{ github.sha }}"
 
-            git commit -F commit_msg.txt
-            echo "Pushing changes to repo branch..."
-            git push origin repo
+            echo "Pushing changes to $PUBLISH_BRANCH branch..."
+            git push origin HEAD:"$PUBLISH_BRANCH"
+
+            echo "Generate release summary"
+
+            awk_script="../.github/scripts/summarize-themes.awk"
+
+            if [ -f "$awk_script" ]; then
+              git show --name-status --format="" HEAD \
+                | awk -f "$awk_script" \
+                >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "No summary generated (awk script not found)." >> "$GITHUB_STEP_SUMMARY"
+            fi
 
             echo "✓ Published all theme files to repo branch"
           fi
-
-      - name: Create release summary
-        run: |
-          echo "## 📦 Theme Archives Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The following theme archives have been created and published to the \`repo\` branch:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          IFS=',' read -ra ARCHIVES <<< "${{ needs.compile.outputs.theme-archives }}"
-          for archive in "${ARCHIVES[@]}"; do
-            echo "- \`$archive\`" >> $GITHUB_STEP_SUMMARY
-          done
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 📋 Published Files" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All files from the \`${{ needs.compile.outputs.output-dir }}/\` directory have been published, including theme archives, \`index.json\` with metadata, and \`README.md\`." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "View all files in the [\`repo\`](../../tree/repo) branch." >> $GITHUB_STEP_SUMMARY

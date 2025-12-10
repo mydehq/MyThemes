@@ -1,31 +1,49 @@
-#   ____             __ _
-#  / ___|___  _ __  / _(_) __ _
-# | |   / _ \| '_ \| |_| |/ _` |
-# | |__| (_) | | | |  _| | (_| |
-#  \____\___/|_| |_|_| |_|\__, |
-#                         |___/
-#
-# ------------------------------------
+packaging:
+  input-dir: "themes"
+  output-dir: "dist"
+  publish-branch: "repo"
 
-# Variables available in ${{var_name}} format
-#   These will be replaced with actual values:
-#       name:    name of the theme
-#       version: version of the theme
-#       author:  author of the theme
-#       file:    filename with ext of theme archive
+  archive:
+    # Max num of versions to keep of each theme
+    max-versions: 10
 
-build:
-  input_dir: "themes"
-  output_dir: "dist"
-  archive_name: "${{name}}-${{version}}"
+    # Direct download urls of theme files
+    # Can add multiple mirrors, will be tried in order
+    # MUST INCLUDE:
+    #        ${{theme}}: theme name
+    #        ${{file}}:  filename (version.tar.gz)
+    src-urls:
+      - "https://github.com/mydehq/mytm/raw/refs/heads/repo/${{theme}}/${{file}}"
 
-index:
-  # Schema version to use
-  schema_version: 1.0
+  repo:
+    name: "official"
 
-  # Default repo name
-  repo_name: "official"
+    # index.html content.
+    # set to false to disable generation
+    index-html: false
 
-  # Direct Download link/path for archives
-  # MUST add ${{file}} in the filename's place
-  download_url: "https://github.com/mydehq/mytm/raw/refs/heads/repo/${{file}}"
+    # README.md content.
+    # set to false to disable generation
+    readme-md: |
+
+      <div align="center">
+
+      ![MyTM Logo](https://github.com/mydehq/MyTM/raw/refs/heads/main/src/icon.png)
+
+      # MyTM Theme Repo
+
+      This branch contains packaged theme archives of ${{mytm-repo}} themes.
+
+      </div>
+
+      ## Themes
+
+      Available themes:
+
+        ${{themes}}
+
+      ---
+
+      <small align="center">
+        Generated automatically from the main branch.
+      </small>

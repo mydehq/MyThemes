@@ -1,0 +1,119 @@
+name: Validate Theme Changes
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "themes/**"
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  validate-themes:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup yq
+        uses: mikefarah/yq@master
+
+      - name: Install required dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq tar gawk
+
+      - name: Get changed theme directories
+        id: changed-themes
+        run: |
+          # Get the list of changed files in themes directory
+          git fetch origin ${{ github.base_ref }}
+
+          # Find all modified theme directories
+          CHANGED_DIRS=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- themes/ \
+            | grep '^themes/' \
+            | cut -d'/' -f2 \
+            | sort -u)
+
+          if [ -z "$CHANGED_DIRS" ]; then
+            echo "No theme directories changed"
+            echo "themes=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Changed theme directories:"
+          echo "$CHANGED_DIRS"
+
+          # Convert to JSON array for output
+          THEMES_JSON=$(echo "$CHANGED_DIRS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "themes=$THEMES_JSON" >> $GITHUB_OUTPUT
+
+      - name: Validate changed themes
+        if: steps.changed-themes.outputs.themes != ''
+        run: |
+          THEMES='${{ steps.changed-themes.outputs.themes }}'
+          VALIDATION_FAILED=0
+
+          echo "🔍 Validating theme directories..."
+          echo ""
+
+          # Parse JSON array and validate each theme
+          # Use process substitution to avoid subshell and preserve VALIDATION_FAILED
+          while read -r theme; do
+            if [ -z "$theme" ]; then
+              continue
+            fi
+
+            echo "📦 Validating theme: $theme"
+
+            if ! bash app/mytm -vt "$theme"; then
+              echo "::error title=Theme Validation Failed::Theme '$theme' failed validation. Check logs for details."
+              echo "❌ Theme '$theme' failed validation"
+              VALIDATION_FAILED=1
+            fi
+
+            echo ""
+          done < <(echo "$THEMES" | jq -r '.[]')
+
+          if [ $VALIDATION_FAILED -eq 1 ]; then
+            echo "::error::One or more themes failed validation"
+            exit 1
+          fi
+
+          echo "✅ All changed themes passed validation!"
+
+      - name: Add summary
+        if: always()
+        run: |
+          THEMES='${{ steps.changed-themes.outputs.themes }}'
+
+          if [ -z "$THEMES" ] || [ "$THEMES" = "[]" ] || [ "$THEMES" = "" ]; then
+            echo "## 📋 Validation Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No theme directories were changed in this PR." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          echo "## 📋 Theme Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Changed Themes:**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "$THEMES" | jq -r '.[]' | while read -r theme; do
+            if [ -n "$theme" ]; then
+              echo "- \`$theme\`" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ **All themes passed validation**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Some themes failed validation**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi

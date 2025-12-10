@@ -1,0 +1,597 @@
+#!/bin/env bash
+
+# MyTM Package Builder
+# Builds theme packages & generates index.json
+
+
+#------------ Determine Root ----------
+
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+
+if [[ "$(basename "$PWD")" == "app" ]]; then
+  PROJECT_ROOT=".."
+else
+  PROJECT_ROOT="."
+fi
+
+#--------------- Fallback Config ----------------
+
+INPUT_DIR="$PROJECT_ROOT/themes"
+OUTPUT_DIR="$PROJECT_ROOT/dist"
+CONFIG_FILE="$PROJECT_ROOT/config.yml"
+TEMP_DIR="$PROJECT_ROOT/.tmp"
+HASH_ALGO="sha256"
+MAX_ARCHIVE_VERSIONS=10
+VALIDATE_ONLY=false
+VALIDATE_THEME=""
+
+if [ -n "$XDG_CACHE_HOME" ]; then
+  CACHE_DIR="$XDG_CACHE_HOME/mytm"
+else
+  CACHE_DIR="$HOME/.cache/mytm"
+fi
+
+#------------ Functions ------------------
+
+export INPUT_DIR OUTPUT_DIR CONFIG_FILE VALIDATE_ONLY VALIDATE_THEME TEMP_DIR HASH_ALGO MAX_ARCHIVE_VERSIONS
+
+# Source utility functions
+source "$SCRIPT_DIR/logging.sh"
+source "$SCRIPT_DIR/.utils.sh"
+source "$SCRIPT_DIR/validation.sh"
+
+show-help() {
+  cat <<EOF
+MyTM Theme Packager
+
+DESC:
+    Packages themes into distributable archives, generates SHA256 checksums,
+    creates an index.json with metadata, and builds README.md.
+
+USAGE:
+    $0 [OPTIONS]
+    $0 -vt <theme_name> [-i <input_dir>]
+
+FLAGS:
+    -h,  --help                Show this help message
+    -i,  --input-dir DIR       Override input directory from config
+    -o,  --output-dir DIR      Override output directory from config
+    -c,  --config FILE         Set config file (default: $CONFIG_FILE)
+    -vt, --validate-theme      Validate given/all theme dirs (inside input-dir)
+EOF
+}
+
+clean-tmp() { rm -rf "$TEMP_DIR"; }
+
+package-theme() {
+    local theme_dir="$1"
+    local archive_path="$2"
+
+    if ! tar -czf "$archive_path" -C "$theme_dir" .; then
+        log.fatal "Failed to package archive: '$theme_name'"
+    fi
+}
+
+show-list() {
+    local color="$1" && shift
+    local items=("$@")
+
+    if [ ${#items[@]} -gt 0 ]; then
+        # Group versions by theme
+        declare -A theme_versions
+
+        for item in "${items[@]}"; do
+            # If a path
+            if [[ "$item" == *"/"* ]]; then
+                theme_name=$(basename "$(dirname "$item")")
+                version=$(basename "$item" .tar.gz)
+            else
+                # A theme name
+                theme_name="$item"
+                version=""
+            fi
+
+            if [ -z "${theme_versions[$theme_name]}" ]; then
+                theme_versions[$theme_name]="$version"
+            else
+                if [ -n "$version" ]; then
+                    theme_versions[$theme_name]="${theme_versions[$theme_name]}, $version"
+                fi
+            fi
+        done
+
+        for theme_name in "${!theme_versions[@]}"; do
+             local v_str="${theme_versions[$theme_name]}"
+             if [ -z "$v_str" ]; then
+                 echo -e "   - ${color}$theme_name${NC}"
+             else
+                 echo -e "   - ${color}$theme_name:${NC} $v_str"
+             fi
+        done
+        echo
+    fi
+}
+
+
+# ---------- Start script ----------
+
+clear -x
+echo -e "\n==============${NC} ${YELLOW}MyTM Packager${NC} ==============\n"
+
+# ---------- override confs from config --------
+
+MyTM_VERSION="NULL"
+INPUT_DIR="$(get-conf "input-dir")" || exit 1
+OUTPUT_DIR="$(get-conf "output-dir")" || exit 1
+MAX_ARCHIVE_VERSIONS="$(get-conf "archive.max-versions")" || exit 1
+
+#-------------- parse arguments ------------------
+
+# Run main function if script is executed directly
+[[ "${BASH_SOURCE[0]}" != "${0}" ]] && log.fatal "This script should not be sourced."
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  -h | --help)
+    show-help
+    exit 0
+    ;;
+  -o | --output-dir)
+    OUTPUT_DIR="$2"
+    shift 2
+    ;;
+  -i | --input-dir)
+    INPUT_DIR="$2"
+    shift 2
+    ;;
+  -c | --config)
+    CONFIG_FILE="$2"
+    shift 2
+    ;;
+  -mv|--max-versions)
+    MAX_ARCHIVE_VERSIONS="$2"
+    shift 2
+    ;;
+   -vt|--validate-theme)
+    VALIDATE_ONLY=true
+    if [[ -n "$2" && "$2" != -* ]]; then
+      VALIDATE_THEME="$2"
+      shift 2
+    else
+      shift 1
+    fi
+    ;;
+  *)
+    log.error "Unknown option: $1"
+    show-help
+    exit 1
+    ;;
+  esac
+done
+
+
+#------------------------------ Setup Environment ----------------------------------
+
+log.info -b "Checking up environment..."
+log.tab.inc
+
+req_cmds="yq jq tar tr awk"
+
+#shellcheck disable=SC2086
+has-cmd $req_cmds || { log.fatal "Please install required commands"; }
+log.success "Available: $req_cmds"
+
+if [ -d "$INPUT_DIR" ]; then
+    log.success "Found Input dir: $INPUT_DIR/"
+else
+    log.fatal "Input directory does not exist"
+fi
+
+# Create temp dir
+if [ -d "$TEMP_DIR" ]; then
+    rm -rf "$TEMP_DIR"
+    log.success "Removed old Temp dir: $TEMP_DIR"
+else
+    mkdir -p "$TEMP_DIR" || log.fatal "Failed to create Temp dir: $TEMP_DIR/"
+    log.success "Created Temp dir"
+fi
+
+# Create output dir
+if [ "$VALIDATE_ONLY" != "true" ]; then
+    if [ -d "$OUTPUT_DIR" ]; then
+        log.success "Output dir exists: $OUTPUT_DIR/"
+    else
+       mkdir -p "$OUTPUT_DIR" || log.fatal "Failed to create output or temp directory"
+       log.success "Made output dir: $OUTPUT_DIR/"
+    fi
+else
+    log.info "Skipping output dir creation"
+fi
+
+log.tab.reset
+log.success -b "Environment setup complete\n"
+
+
+#------------- Just validation check -------------#
+#---------- This only runs in -vt flag -----------#
+
+if [ "$VALIDATE_ONLY" == "true" ]; then
+
+    log.info -b "Starting Validation..."
+    log.tab.inc
+
+    validation_failed=0
+
+    if [[ -n "$VALIDATE_THEME" ]]; then
+        log.info "Validating theme: $VALIDATE_THEME"
+        log.tab.inc
+        validate-theme-dir -v "$INPUT_DIR/$VALIDATE_THEME" || validation_failed=1
+        log.tab.dec
+    else
+        if [ -z "$(ls -A "${INPUT_DIR}")" ]; then
+            log.error "Input dir '${INPUT_DIR}' is empty."
+            validation_failed=1
+        else
+            for theme_dir in "$INPUT_DIR"/*; do
+                theme_name="$(basename "$theme_dir")"
+                log.info -b "Validating theme: $theme_name"
+
+                log.tab.inc
+                validate-theme-dir "$theme_dir" || validation_failed=1
+                log.tab.dec
+            done
+        fi
+        echo
+    fi
+
+    log.tab.reset
+
+    if [ "$validation_failed" -eq 1 ]; then
+        log.fatal -b "Validation failed. Please fix the errors above."
+    else
+        log.success -b "${GREEN}Validation complete, Everything seems good.${NC}"
+        exit 0
+    fi
+fi
+
+
+#----------------------------------- Package Themes ---------------------------------------
+
+log.info -b "Packaging themes..."
+log.tab.inc
+
+# ------------ Index.json check ------------
+
+repo_name="$(get-conf "repo.name")" || exit 1
+repo_release_time="$(date +%s)"
+repo_src_urls="$(get-conf -j "archive.src-urls")" || exit 1
+
+current_themes="{}"
+action_msg="Creating..."
+
+if [ -f "${OUTPUT_DIR}/index.json" ]; then
+    log.info "Found Repo Index"
+
+    log.tab.inc
+    if validate-json "$OUTPUT_DIR/index.json"; then
+        log.tab.dec
+        log.success "Index is valid"
+        # Backup Themes from valid index
+        current_themes="$(jq -c '.themes' "$OUTPUT_DIR/index.json")"
+        action_msg="Updating..."
+    else
+        log.tab.dec
+        log.error "Index is invalid"
+
+        # Remove invalid index
+        if rm "${OUTPUT_DIR}/index.json"; then
+            log.success "Removed Invalid Index"
+        else
+            log.fatal "Failed to remove Index: $OUTPUT_DIR/index.json"
+        fi
+    fi
+else
+    log.info "No Repo Index found"
+fi
+
+# Create/Update Index
+log.info "$action_msg"
+if create-repo-index \
+        -rn "$repo_name" \
+        -rt "$repo_release_time" \
+        -su "$repo_src_urls" \
+        -th "$current_themes" \
+        -o  "${OUTPUT_DIR}/index.json"; then
+
+    log.success "Done"
+else
+    log.fatal "Failed"
+fi
+
+
+#------------- process dirs in loop -------------
+
+log.info "\nProcessing theme dirs:"
+
+added_themes=()
+added_theme_count=0
+
+updated_themes=()
+updated_theme_count=0
+
+deleted_themes=()
+deleted_theme_count=0
+
+# Loop through all theme dirs
+if [ -z "$(ls -A "${INPUT_DIR}")" ]; then
+    log.error "Input dir ${INPUT_DIR} is empty. Skipping..."
+else
+    # Loop through all theme dirs
+    for theme_dir in "${INPUT_DIR}"/*; do
+        is_added=0
+        is_updated=0
+
+        log.info "${YELLOW}Processing: $theme_dir ${NC}"
+        log.tab.inc
+
+        log.info "Validating dir...."
+        log.tab.inc
+        if validate-theme-dir "$theme_dir"; then
+            log.tab.dec
+            log.success "Directory valid"
+        else
+            log.tab.dec
+            log.fatal "Directory Invalid. Please fix"
+        fi
+
+
+        #---------- Extract/Build Theme & Archive Info ------------
+
+        # Extract theme info
+        theme_yml="$theme_dir/theme.yml"
+        theme_name="$(basename "$theme_dir")" || log.fatal "Failed to extract theme name"
+        theme_version="$(get-theme-ver "${theme_dir}/theme.yml")" || log.fatal "Failed to extract theme version"
+
+        # Build archive Info
+        archive_name="${theme_version}.tar.gz"
+        archive_dir="${OUTPUT_DIR}/$theme_name"
+        archive_path="${archive_dir}/${archive_name}"
+
+
+        #-------- Generate theme archive, hash ----------
+
+        # Create archive directory
+        if [ ! -d "$archive_dir" ]; then
+            mkdir -p "$archive_dir" || log.fatal "Failed to create directory: '$archive_dir'"
+            log.success "Created theme directory..."
+        else
+            log.success "Theme directory exists"
+        fi
+
+        # Create Archive
+        if [ -f "$archive_path" ]; then
+            log.success "Theme archive exists"
+            new_archive_created=false
+        else
+            package-theme "$theme_dir" "$archive_path" || exit 1
+            new_archive_created=true
+        fi
+        log.success "Packing Done"
+
+        if [ ! -f "$archive_path" ]; then
+            log.fatal "Theme archive not found: '$archive_path'"
+        fi
+
+        # Generate hash
+        archive_hash="$(gen-hash "$archive_path")" || log.fatal "Failed to generate hash for: '$archive_path'"
+        log.success "Generated $HASH_ALGO hash"
+
+
+        #-------------- Update .versions.json ----------------
+
+        versions_file="${OUTPUT_DIR}/$theme_name/.versions.json"
+
+        if [ ! -f "$versions_file" ]; then
+            echo "[]" > "$versions_file"
+        fi
+
+        export YQ_I_VER="$theme_version" \
+               YQ_I_HASH="$archive_hash" \
+               YQ_I_ALGO="$HASH_ALGO"
+
+        # Check if version already exists
+        if jq -e --arg ver "$theme_version" 'any(.[]; .ver == $ver)' "$versions_file" > /dev/null; then
+
+            # Version exists, check if hash changed
+            existing_hash=$(jq -r --arg ver "$theme_version" '.[] | select(.ver == $ver) | .hash.value' "$versions_file")
+
+            if [ "$existing_hash" != "$archive_hash" ]; then
+
+                if [ "$new_archive_created" != true ]; then
+                    log.tab.inc
+                    log.warn "Hash doesn't match with versions index"
+                    log.info "Repacking theme..."
+
+                    rm -rf "$archive_path"                     || log.fatal "Failed to remove old archive"
+                    package-theme "$theme_dir" "$archive_path" ||  exit 1
+                    archive_hash="$(gen-hash "$archive_path")" || log.fatal "Failed to generate hash for new archive"
+
+                    log.success "Done"
+                    log.tab.dec
+                fi
+
+                # Update Hash in version index
+                if yq -i '(.[] | select(.ver == env(YQ_I_VER)) | .hash.value) = env(YQ_I_HASH)' "$versions_file" && \
+                   yq -i '(.[] | select(.ver == env(YQ_I_VER)) | .hash.algo) = env(YQ_I_ALGO)' "$versions_file"; then
+                    log.success "Updated hash in versions index"
+                    is_updated=1
+                else
+                    log.fatal "Failed to update hash in version's index"
+                fi
+            else
+                log.success "Entry exists in version's index"
+            fi
+        else
+            # Version doesn't exist, add it
+            if yq -i '. = [{"ver": env(YQ_I_VER), "hash": {"value": env(YQ_I_HASH), "algo": env(YQ_I_ALGO)}}] + .' "$versions_file"; then
+                log.success "Updated version's index"
+                is_added=1
+            else
+                log.fatal "Failed to update version's index"
+            fi
+        fi
+
+
+        #------------ Cleanup Old Versions -------------------
+
+        if [ "$(jq '. | length' "$versions_file")" -gt "$MAX_ARCHIVE_VERSIONS" ]; then
+
+            # Get list of versions to delete (skip first N)
+            versions_to_drop=$(jq -r --argjson max "$MAX_ARCHIVE_VERSIONS" '.[$max:] | .[].ver' "$versions_file")
+
+            log.debug "Cleaning up old versions (Limit: $MAX_ARCHIVE_VERSIONS)..."
+            if [ -n "$versions_to_drop" ]; then
+                dropped_versions=()
+                for ignored_ver in $versions_to_drop; do
+                    old_archive_path="${archive_dir}/${ignored_ver}.tar.gz"
+                    if [ -f "$old_archive_path" ]; then
+                        rm -f "$old_archive_path"
+                        dropped_versions+=("$ignored_ver")
+                    else
+                        log.warn " Old archive not found: $ignored_ver"
+                    fi
+                done
+
+                if [ ${#dropped_versions[@]} -gt 0 ]; then
+                    printf -v joined_versions "%s, " "${dropped_versions[@]}"
+                    log.success "Removed old version(s): ${joined_versions%, }"
+                fi
+
+                # Update .versions.json to keep only top N
+                yq -i -o=json 'with(.; . = .[0:env(MAX_ARCHIVE_VERSIONS)])' "$versions_file" || log.error "Failed to trim versions index"
+            fi
+        else
+            log.success "No old versions to clean up"
+        fi
+
+
+        #------------ Create/Update Index Entry --------------
+
+        export YQI_THM="$theme_name" \
+               YQI_VER="$theme_version"
+
+        # Check if theme and latest version exist
+        _should_update=false
+        _update_msg=""
+        _existing_version=$(jq -r --arg theme "$theme_name" '.themes[$theme].latest // ""' "$OUTPUT_DIR/index.json" 2>/dev/null)
+
+        if [ -z "$_existing_version" ]; then
+            _should_update=true
+            _update_msg="Added to Repository Index"
+        elif [ "$_existing_version" != "$theme_version" ]; then
+            _should_update=true
+            _update_msg="Updated Repository Index: ${_existing_version} -> ${theme_version}"
+        else
+            log.success "Already in Repository Index"
+        fi
+
+        if [ "$_should_update" = true ]; then
+            if yq -i ".themes[\"$theme_name\"].latest = \"$theme_version\"" "$OUTPUT_DIR/index.json"; then
+                log.success "$_update_msg"
+                is_added=1
+            else
+                log.fatal "Failed to update Repository Index"
+            fi
+        fi
+
+
+        # ----------- Update theme tracking ------------
+
+        log.tab.dec
+        if [ "$is_added" -eq 1 ]; then
+            added_themes+=("$archive_path") && ((added_theme_count++))
+            log.success -b "${GREEN}Added theme: $theme_name ($theme_version)$NC\n"
+
+        elif [ "$is_updated" -eq 1 ]; then
+            updated_themes+=("$archive_path") && ((updated_theme_count++))
+            log.success -b "${BLUE}Updated theme: $theme_name ($theme_version)$NC\n"
+
+        else
+            log.info -b "Skipped theme: $theme_name ($theme_version)\n"
+        fi
+    done
+fi
+
+log.tab.reset
+log.success -b "${GREEN}Packaging complete${NC}\n"
+
+
+# ------- cleanup -----------
+
+log.info -b "Cleaning up..."
+log.tab.inc
+
+# Clean up stale themes
+if [ -f "$OUTPUT_DIR/index.json" ]; then
+    log.info "Checking for stale themes..."
+
+    # Get all themes from index
+    indexed_themes=$(jq -r '.themes | keys | .[]' "$OUTPUT_DIR/index.json")
+
+    log.tab.inc
+    for theme in $indexed_themes; do
+        if [ ! -d "$INPUT_DIR/$theme" ]; then
+
+            log.info "Found stale: $theme"
+
+            export YQ_I_THEME="$theme"
+            yq -i 'del(.themes[env(YQ_I_THEME)])' "$OUTPUT_DIR/index.json"
+
+            # Remove output theme directory
+            if [ -d "$OUTPUT_DIR/$theme" ]; then
+                rm -rf "${OUTPUT_DIR:?}/${theme:?}" || log.error "Couldn't Remove theme dir: $theme"
+            fi
+
+            log.success "Purged"
+            deleted_themes+=("$theme") && ((deleted_theme_count++))
+        fi
+    done
+    log.tab.dec
+    log.success "Done"
+fi
+
+# Temporary dir
+log.info "Removing Temporary files"
+if clean-tmp; then
+    log.success "Removed"
+else
+    log.error "Failed to clean up temporary files"
+fi
+
+log.tab.dec
+log.success -b "Cleanup Complete\n"
+
+
+#------------------------------- Show Summary ----------------------------------
+
+echo -e "${BLUE}============= Summary ==============$NC\n"
+show-repo-size "$OUTPUT_DIR"
+
+
+#------------ Added Themes -------------
+
+log.success "\n${GREEN}Themes Added: ${added_theme_count}${NC}"
+show-list "$GREEN" "${added_themes[@]}"
+
+
+#------------ Updated Themes -------------
+
+log.info "${BLUE}Themes Updated: ${updated_theme_count}$NC"
+show-list "$BLUE" "${updated_themes[@]}"
+
+
+#------------ Purged Themes -------------
+
+log.error "${RED}Themes Purged: ${deleted_theme_count}$NC"
+show-list "$RED" "${deleted_themes[@]}"
