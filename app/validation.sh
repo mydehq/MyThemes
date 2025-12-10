@@ -1,7 +1,15 @@
-
-# Usage: validate-theme-dir <theme_dir>
+# Usage: validate-theme-dir [-v|--verbose] <theme_dir>
 validate-theme-dir() {
-   local theme_dir="$1"
+   local verbose=false
+   local theme_dir=""
+
+   while [[ "$#" -gt 0 ]]; do
+       case $1 in
+           -v|--verbose) verbose=true; shift ;;
+           *) theme_dir="$1"; shift ;;
+       esac
+   done
+
    local theme_yml="$theme_dir/theme.yml"
    local has_errors=0
 
@@ -28,7 +36,7 @@ validate-theme-dir() {
       log.error "theme.yml is empty in '$theme_dir'."
       return 1
    }
-   log.success "Has valid Manifest"
+   $verbose && log.success "Has valid Manifest"
 
    # --------------- Check required fields --------------
 
@@ -43,7 +51,7 @@ validate-theme-dir() {
         log.error "Invalid ${YELLOW}'version'${NC}: ${BLUE}must be semantic X.Y.Z${NC}"
         has_errors=1
    else
-        log.success "Has valid version"
+        $verbose && log.success "Has valid version"
    fi
 
    # 2. Check author field
@@ -54,7 +62,7 @@ validate-theme-dir() {
         log.error "Missing required field: ${YELLOW}'author'${NC}"
         has_errors=1
    else
-        log.success "Has valid author"
+        $verbose && log.success "Has valid author"
    fi
 
    # 3. Check url field
@@ -68,7 +76,7 @@ validate-theme-dir() {
         log.error "Invalid ${YELLOW}'url'${NC}: ${BLUE}must start with http:// or https://${NC}"
         has_errors=1
    else
-        log.success "Has valid URL"
+        $verbose && log.success "Has valid URL"
    fi
 
    # 4. Check config key exists and is an object
@@ -82,7 +90,7 @@ validate-theme-dir() {
         log.error "Invalid ${YELLOW}'config'${NC} field: ${BLUE}must be an object/map${NC}"
         has_errors=1
    else
-        log.success "Has valid config object"
+        $verbose && log.success "Has valid config object"
    fi
 
    # Return based on whether errors were found

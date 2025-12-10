@@ -226,7 +226,7 @@ if [ "$VALIDATE_ONLY" == "true" ]; then
     if [[ -n "$VALIDATE_THEME" ]]; then
         log.info "Validating theme: $VALIDATE_THEME"
         log.tab.inc
-        validate-theme-dir "$INPUT_DIR/$VALIDATE_THEME" || validation_failed=1
+        validate-theme-dir -v "$INPUT_DIR/$VALIDATE_THEME" || validation_failed=1
         log.tab.dec
     else
         if [ -z "$(ls -A "${INPUT_DIR}")" ]; then
