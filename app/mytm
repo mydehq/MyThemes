@@ -281,13 +281,13 @@ if [ -f "${OUTPUT_DIR}/index.json" ]; then
         if [ "$schema_ver" == "0" ]; then
             log.tab.dec
             log.warn "Index Schema not found"
-            rm -rf "${OUTPUT_DIR:?}/**" || log.fatal "Failed to remove invalid repo"
+            rm -rf "${OUTPUT_DIR:?}/"* || log.fatal "Failed to remove invalid repo"
             log.success "Removed invalid repo"
             action_msg="Creating new index..."
         elif [ "$schema_ver" != "2" ]; then
             log.tab.dec
             log.warn "Index Schema is not v2."
-            rm -rf "${OUTPUT_DIR:?}/**" || log.fatal "Failed to remove invalid repo"
+            rm -rf "${OUTPUT_DIR:?}/"* || log.fatal "Failed to remove invalid repo"
             log.success "Removed old repo"
             action_msg="Creating new index..."
         else
