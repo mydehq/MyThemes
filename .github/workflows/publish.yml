@@ -41,9 +41,6 @@ jobs:
 
       - name: Configure Git Credentials (Initial setup)
         run: |
-          # Use the GITHUB_TOKEN to authenticate push operations
-          GIT_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
-          git remote set-url origin $GIT_URL
           git config user.name "soymadip"
           git config user.email "84225810+soymadip@users.noreply.github.com"
 
@@ -95,11 +92,11 @@ jobs:
           OUTPUT_DIR="${{ steps.get-config.outputs.output-dir }}"
           PUBLISH_BRANCH="${{ steps.get-config.outputs.publish-branch }}"
 
-          git config user.name "soymadip"
-          git config user.email "84225810+soymadip@users.noreply.github.com"
-
           # Navigate into the nested repository
           cd "$OUTPUT_DIR"
+
+          git config user.name "soymadip"
+          git config user.email "84225810+soymadip@users.noreply.github.com"
 
           # Add all changed files
           git add .
