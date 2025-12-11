@@ -1,7 +1,7 @@
 <div align="center">
 
 <h1>
-    <img src="./app/src/icon.png" alt="MyTM" width="80">
+    <img src="./src/icon.png" alt="MyTM" width="80">
     <p>MyTM</p>
 </h1>
 
@@ -78,7 +78,7 @@ cat > themes/your-theme-name/theme.yml << EOF
 version: "1.0"
 desc: "Your theme description"
 author: "Your Name"
-repo: "https://github.com/your-repo"
+url: "https://github.com/your-repo"
 config:
   icon-theme: icon-theme-name
 EOF
