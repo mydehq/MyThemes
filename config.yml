@@ -13,6 +13,7 @@ packaging:
     #        ${{theme}}: theme name
     #        ${{file}}:  filename (version.tar.gz)
     src-urls:
+      - "https://mytm-repo.netlify.app/${{theme}}/${{file}}"
       - "https://github.com/mydehq/mytm/raw/refs/heads/repo/${{theme}}/${{file}}"
 
   repo:
