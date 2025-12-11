@@ -18,7 +18,6 @@
 
 | Theme Name | Latest Version |
 | :--------- | :------------- |
-
 ${{themes}}
 
 <div align="center">
