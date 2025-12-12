@@ -77,8 +77,7 @@ get-conf() {
         log.error "Configuration key must be provided."
         return 1
     elif [[ ! -f "$conf_file" ]]; then
-        log.error "Config file '$conf_file' not found or is not readable."
-        return 1
+        log.fatal "Config file '$conf_file' not found or is not readable."
     elif [[ "$conf_file" != "$CONFIG_FILE" ]]; then
         root_key="."
     fi

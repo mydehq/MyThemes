@@ -142,4 +142,4 @@ log.info()    { _log -l info "$@"; }
 log.success() { _log -l success "$@"; }
 log.warn()    { _log -l warn "$@"; }
 log.error()   { _log -l error "$@"; }
-log.fatal()   { _log -l fatal "$@" && exit 1 }
+log.fatal()   { _log -l fatal "$@"; exit 1; }

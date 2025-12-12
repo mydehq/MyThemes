@@ -177,10 +177,10 @@ done
 
 # Arg > Config > Default
 CONFIG_FILE="${ARG_CONFIG_FILE:-$CONFIG_FILE}"
-INPUT_DIR="${ARG_INPUT_DIR:-$(get-conf -s "input-dir" -d "$INPUT_DIR")}"
-OUTPUT_DIR="${ARG_OUTPUT_DIR:-$(get-conf -s "output-dir" -d "$OUTPUT_DIR")}"
-MAX_ARCHIVE_VERSIONS="${ARG_MAX_ARCHIVE_VERSIONS:-$(get-conf -s "max-versions" -d "$MAX_ARCHIVE_VERSIONS")}"
-PUBLISH_BRANCH="${ARG_PUBLISH_BRANCH:-$(get-conf -s "publish-branch" -d "$PUBLISH_BRANCH")}"
+INPUT_DIR="${ARG_INPUT_DIR:-$(get-conf -s "input-dir" -d "$INPUT_DIR")}" || exit 1
+OUTPUT_DIR="${ARG_OUTPUT_DIR:-$(get-conf -s "output-dir" -d "$OUTPUT_DIR")}" || exit 1
+MAX_ARCHIVE_VERSIONS="${ARG_MAX_ARCHIVE_VERSIONS:-$(get-conf -s "max-versions" -d "$MAX_ARCHIVE_VERSIONS")}" || exit 1
+PUBLISH_BRANCH="${ARG_PUBLISH_BRANCH:-$(get-conf -s "repo.branch" -d "$PUBLISH_BRANCH")}" || exit 1
 
 #------------------------------ Setup Environment ----------------------------------
 
@@ -275,7 +275,7 @@ log.tab.inc
 # ------------ Index.json check ------------
 
 repo_name="$(get-conf "repo.name")" || exit 1
-repo_branch="$(get-conf "repo.branch")" || exit 1
+repo_branch="$PUBLISH_BRANCH"
 repo_release_time="$(date +%s)"
 repo_mirrors="$(get-conf -j "repo.mirrors")" || exit 1
 
