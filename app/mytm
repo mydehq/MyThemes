@@ -121,11 +121,6 @@ show-list() {
 clear -x
 echo -e "\n==============${NC} ${YELLOW}MyTM Packager${NC} ==============\n"
 
-# ---------- override confs from config --------
-
-INPUT_DIR="$(get-conf "input-dir")" || exit 1
-OUTPUT_DIR="$(get-conf "output-dir")" || exit 1
-MAX_ARCHIVE_VERSIONS="$(get-conf "max-versions")" || exit 1
 
 #-------------- parse arguments ------------------
 
@@ -140,19 +135,19 @@ while [[ $# -gt 0 ]]; do
     exit 0
     ;;
   -o | --output-dir)
-    OUTPUT_DIR="$2"
+    ARG_OUTPUT_DIR="$2"
     shift 2
     ;;
   -i | --input-dir)
-    INPUT_DIR="$2"
+    ARG_INPUT_DIR="$2"
     shift 2
     ;;
   -c | --config)
-    CONFIG_FILE="$2"
+    ARG_CONFIG_FILE="$2"
     shift 2
     ;;
   -mv|--max-versions)
-    MAX_ARCHIVE_VERSIONS="$2"
+    ARG_MAX_ARCHIVE_VERSIONS="$2"
     shift 2
     ;;
    -vt|--validate-theme)
@@ -171,6 +166,15 @@ while [[ $# -gt 0 ]]; do
     ;;
   esac
 done
+
+
+# -------- override defaults from config/args --------
+
+# Arg > Config > Default
+CONFIG_FILE="${ARG_CONFIG_FILE:-$CONFIG_FILE}"
+INPUT_DIR="${ARG_INPUT_DIR:-$(get-conf -s "input-dir" || echo "$INPUT_DIR")}"
+OUTPUT_DIR="${ARG_OUTPUT_DIR:-$(get-conf -s "output-dir" || echo "$OUTPUT_DIR")}"
+MAX_ARCHIVE_VERSIONS="${ARG_MAX_ARCHIVE_VERSIONS:-$(get-conf -s "max-versions" || echo "$MAX_ARCHIVE_VERSIONS")}"
 
 
 #------------------------------ Setup Environment ----------------------------------
@@ -351,7 +355,8 @@ else
     for theme_dir in "${INPUT_DIR}"/*; do
 
         [ -d "$theme_dir" ] || {
-            log.warn "Skipping non-dir: $theme_dir"
+            log.info "Skipping non-dir: $theme_dir"
+            echo
             continue
         }
 

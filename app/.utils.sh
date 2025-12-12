@@ -31,12 +31,17 @@ has-cmd() {
 get-conf() {
     local key json_flag=""
     local conf_file="$CONFIG_FILE" root_key=".packaging"
+    local silent_mode=false
 
     # Parse flags
     while [ "$#" -gt 0 ]; do
         case "$1" in
             -j|--json)
                 json_flag="-o=json"
+                shift
+                ;;
+            -s|--silent)
+                silent_mode=true
                 shift
                 ;;
             *)
@@ -55,12 +60,16 @@ get-conf() {
 
     # Get config value
     value="$(yq $json_flag eval "${root_key}.${key}" "$conf_file" 2>/dev/null)" || {
-        log.error "Failed to get config value for key '$key' from '$conf_file'"
+        if [ "$silent_mode" = false ]; then
+            log.error "Failed to get config value for key '$key' from '$conf_file'"
+        fi
         return 1
     }
 
     if [ "$value" == "null" ] || [ -z "$value" ]; then
-        log.error "Config key '$key' not found or empty in '$conf_file'"
+        if [ "$silent_mode" = false ]; then
+            log.error "Config key '$key' not found or empty in '$conf_file'"
+        fi
         return 1
     fi
 
