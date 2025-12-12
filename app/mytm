@@ -349,6 +349,12 @@ if [ -z "$(ls -A "${INPUT_DIR}")" ]; then
 else
     # Loop through all theme dirs
     for theme_dir in "${INPUT_DIR}"/*; do
+
+        [ -d "$theme_dir" ] || {
+            log.warn "Skipping non-dir: $theme_dir"
+            continue
+        }
+
         is_added=0
         is_updated=0
 
