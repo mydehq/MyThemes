@@ -136,6 +136,7 @@ _log() {
 
 # _log wrappers
 # Usage: log.<level> [-b|--bold] <message>
+log()         { _log -l "" "$@"; }
 log.debug()   { _log -l debug "$@"; }
 log.info()    { _log -l info "$@"; }
 log.success() { _log -l success "$@"; }
