@@ -24,7 +24,7 @@ Supports gtk, qt, kde, rofi & others through templates
 ```bash
 myctl plugin add mytm
 ```
-This will automatically add `official` repo. it's hosted [here](../tree/repo).
+This will automatically add `official` repo. it's hosted [here](../repo).
 
 ### Set a theme
 
