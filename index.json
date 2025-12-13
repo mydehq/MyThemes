@@ -1,7 +1,7 @@
 {
   "schema_ver": 2,
   "repo_name": "official",
-  "release": 1765567952,
+  "release": 1765667375,
   "mirrors": [
     "https://github.com/mydehq/mytm/raw/refs/heads/repo/${{theme}}/${{file}}",
     "https://repo-mytm.vercel.app/${{theme}}/${{file}}",
