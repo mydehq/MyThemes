@@ -92,7 +92,7 @@ jobs:
 
       - name: Package themes
         id: package
-        run: bash app/mytm -c themes/config.yml
+        run: bash app/bin/mytm -c themes/config.yml
 
       - name: Publish themes and index
         run: |
