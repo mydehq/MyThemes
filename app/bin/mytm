@@ -353,7 +353,7 @@ fi
 
 # Get repo metadata
 repo_name="$(get-conf "repo.name")" || exit 1
-repo_url="$(get-conf "repo.url" -d "")"
+repo_url="$(get-conf -s "repo.url")" || repo_url=""
 repo_branch="$PUBLISH_BRANCH"
 repo_release_time="$(date +%s)"
 repo_mirrors="$(get-conf -j "repo.mirrors")" || exit 1
