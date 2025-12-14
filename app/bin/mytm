@@ -6,8 +6,6 @@
 
 #------------ Determine Root ----------
 
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-
 if [[ "$(basename "$PWD")" == "app" ]]; then
   PROJECT_ROOT=".."
 else
@@ -16,33 +14,65 @@ fi
 
 #--------------- Default Config ----------------
 
+BIN_DIR="$(dirname "${BASH_SOURCE[0]}")"
+LIB_DIR="$BIN_DIR/../lib"
+SRC_DIR="$BIN_DIR/../src"
+
 INPUT_DIR="$PROJECT_ROOT/themes"
 OUTPUT_DIR="$PROJECT_ROOT/dist"
 CONFIG_FILE="$PROJECT_ROOT/config.yml"
 PUBLISH_BRANCH="repo"
+
 TEMP_DIR="$PROJECT_ROOT/.tmp"
+CACHE_DIR="$HOME/.cache/mytm"
+TEMPLATE_DIR="$SRC_DIR/templates"
+
 HASH_ALGO="sha256"
 MAX_ARCHIVE_VERSIONS=10
+
 VALIDATE_ONLY=false
 VALIDATE_THEME=""
 
 MYTM_VERSION="NULL"
 MYTM_URL="https://github.com/mydehq/mytm"
 
-if [ -n "$XDG_CACHE_HOME" ]; then
-  CACHE_DIR="$XDG_CACHE_HOME/mytm"
-else
-  CACHE_DIR="$HOME/.cache/mytm"
-fi
+README_CONTENT='
+# MyTM Theme Repository
 
-#------------ Functions ------------------
+View [`index.json`](./index.json) for available themes and mirrors.
+'
 
-export INPUT_DIR OUTPUT_DIR CONFIG_FILE VALIDATE_ONLY VALIDATE_THEME TEMP_DIR HASH_ALGO MAX_ARCHIVE_VERSIONS
+INDEX_CONTENT='
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="refresh" content="0; url=./index.json" />
+    </head>
+    <body style="background-color: #1e1e2e; color: white" >
+        <p>Redirecting to <a href="./index.json">index.json</a>...</p>
+    </body>
+</html>
+'
+
+
+#------------- Pre Processing -------------
+
+export PROJECT_ROOT BIN_DIR LIB_DIR SRC_DIR \
+       INPUT_DIR OUTPUT_DIR CONFIG_FILE PUBLISH_BRANCH \
+       TEMP_DIR CACHE_DIR TEMPLATE_DIR \
+       VALIDATE_ONLY VALIDATE_THEME \
+       HASH_ALGO MAX_ARCHIVE_VERSIONS \
+       MYTM_VERSION MYTM_URL \
+       README_CONTENT INDEX_CONTENT
+
+[ -n "$XDG_CACHE_HOME" ] && CACHE_DIR="$XDG_CACHE_HOME/mytm"
 
 # Source utility functions
-source "$SCRIPT_DIR/logging.sh"
-source "$SCRIPT_DIR/.utils.sh"
-source "$SCRIPT_DIR/validation.sh"
+source "$LIB_DIR/logging.sh"
+source "$LIB_DIR/.utils.sh"
+source "$LIB_DIR/validation.sh"
+
+#------------ Functions ------------------
 
 show-help() {
   cat <<EOF
@@ -187,7 +217,7 @@ PUBLISH_BRANCH="${ARG_PUBLISH_BRANCH:-$(get-conf -s "repo.branch" -d "$PUBLISH_B
 log.info -b "Checking up environment..."
 log.tab.inc
 
-req_cmds="yq jq tar tr awk"
+req_cmds="yq jq tar tr awk diff cmp"
 
 #shellcheck disable=SC2086
 has-cmd $req_cmds || { log.fatal "Please install required commands"; }
@@ -267,23 +297,17 @@ if [ "$VALIDATE_ONLY" == "true" ]; then
 fi
 
 
-#----------------------------------- Package Themes ---------------------------------------
+#------------------------------------ Check Repo ------------------------------
 
-log.info -b "Packaging themes..."
+log.info -b "Setting up Repo..."
 log.tab.inc
 
 # ------------ Index.json check ------------
 
-repo_name="$(get-conf "repo.name")" || exit 1
-repo_branch="$PUBLISH_BRANCH"
-repo_release_time="$(date +%s)"
-repo_mirrors="$(get-conf -j "repo.mirrors")" || exit 1
-
-current_themes="{}"
 action_msg="Creating..."
 
 if [ -f "${OUTPUT_DIR}/index.json" ]; then
-    log.info "Found Repo Index"
+    log.info -b "Found Repo Index"
 
     log.tab.inc
     if validate-json "$OUTPUT_DIR/index.json"; then
@@ -306,7 +330,7 @@ if [ -f "${OUTPUT_DIR}/index.json" ]; then
             log.tab.dec
             log.success "Index is valid"
             # Backup Themes from valid index
-            current_themes="$(jq -c '.themes' "$OUTPUT_DIR/index.json")"
+            current_themes="$(jq -c '.themes' "$OUTPUT_DIR/index.json")" || exit 1
             action_msg="Updating release time..."
         fi
     else
@@ -324,11 +348,18 @@ else
     log.info "No Repo Index found"
 fi
 
+# Get repo metadata
+repo_name="$(get-conf "repo.name")" || exit 1
+repo_branch="$PUBLISH_BRANCH"
+repo_release_time="$(date +%s)"
+repo_mirrors="$(get-conf -j "repo.mirrors")" || exit 1
+
 # Create/Update Index
-log.info "$action_msg"
+log.info -b "$action_msg"
 if create-repo-index \
         -rn "$repo_name" \
         -rt "$repo_release_time" \
+        -mv "$MAX_ARCHIVE_VERSIONS" \
         -ml "$repo_mirrors" \
         -th "$current_themes" \
         -o  "${OUTPUT_DIR}/index.json"; then
@@ -339,9 +370,21 @@ else
 fi
 
 
-#------------- process dirs in loop -------------
+#----------- Initialize Meta ------------
 
-log.info "\nProcessing theme dirs:"
+log.info -b "Initializing meta..."
+log.tab.inc
+init-meta || log.fatal "Failed to initialize meta"
+log.tab.dec
+
+
+log.tab.dec
+log.success -b "Repo Setup Complete\n"
+
+#----------------------------------- Package Themes ---------------------------------------
+
+log.info -b "Packaging themes..."
+log.tab.inc
 
 added_themes=()
 added_theme_count=0

@@ -1,7 +1,7 @@
 <div align="center">
 
 <h1>
-    <img src="./src/icon.png" alt="MyTM" width="80">
+    <img src="./app/src/icon.png" alt="MyTM" width="80">
     <p>MyTM</p>
 </h1>
 
@@ -123,16 +123,8 @@ Available options, Note that all are under `packaging` key:
    - Use `${{theme}}` & `${{file}}` variables.
    - Will be tried in order if 1st mirror is not reachable.
 
-7. `templates.readme`: Path to README.md template file.
-8. `templates.index-html`: Path to index.html template file.
-
-   **Available Variables in Templates:**
-   - `${{repo-name}}`: Repository name.
-   - `${{last-updated}}`: Time of generation.
-   - `${{max-versions}}`: Configured max versions.
-   - `${{mirrors}}`: Formatted list of mirrors (HTML list for index.html, Markdown list for README).
-   - `${{mytm-repo}}`: Link to the official MyTM repository.
-   - `${{themes}}`: The table of generated themes.
+7. `templates.readme`: true/false, enable or disable generation of README.md (default: true)
+8. `templates.index-html`: same as former for index.html
 
 ### Add Themes
 

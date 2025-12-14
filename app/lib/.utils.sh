@@ -168,7 +168,7 @@ get-file-size() {
         return 1
     fi
 
-    stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null
+    stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || exit 1
 }
 
 # Calculate total size of theme files and index.json
@@ -188,7 +188,7 @@ show-repo-size() {
 
     # Calculate index.json size
     if [ -f "$output_dir/index.json" ]; then
-        local index_size=$(get-file-size "$output_dir/index.json")
+        local index_size=$(get-file-size "$output_dir/index.json") || exit 1
         total_bytes=$((total_bytes + index_size))
     fi
 
@@ -391,6 +391,7 @@ create-repo-index() {
     local repo_name=""
     local repo_release_time=""
     local repo_mirrors=""
+    local max_versions=""
     local theme_object=""
     local output_file=""
 
@@ -409,6 +410,10 @@ create-repo-index() {
                 repo_mirrors="$2"
                 shift 2
                 ;;
+            -mv|--max-versions)
+                max_versions="$2"
+                shift 2
+                ;;
             -th|--theme-obj)
                 theme_object="$2"
                 shift 2
@@ -418,11 +423,12 @@ create-repo-index() {
                 shift 2
                 ;;
             -h|--help)
-                echo "Usage: create-repo-index -rn <repo_name> -rt <release_time> -ml <mirror_list> [-th <theme_object>] [-o <output_file>]"
+                echo "Usage: create-repo-index -rn <repo_name> -rt <release_time> -ml <mirror_list> -mv <max_versions> [-th <theme_object>] [-o <output_file>]"
                 echo "Flags:"
                 echo "  -rn|--repo-name <repo_name>        Repository name (e.g., 'official')"
                 echo "  -rt|--release-time <timestamp>     Repository release time (UNIX timestamp)"
                 echo "  -ml|--mirror-list <json_array>     Source URLs as JSON array"
+                echo "  -mv|--max-versions <number>        Maximum versions to keep"
                 echo "  -th|--theme-obj <json_object>      Theme object as JSON (optional, defaults to {})"
                 echo "  -o|--output-file <file_path>       Output file path (optional, defaults to \$OUTPUT_DIR/index.json)"
                 return 0
@@ -444,7 +450,7 @@ create-repo-index() {
     fi
 
     # Validate required arguments
-    if [ -z "$repo_name" ] || [ -z "$repo_release_time" ] || [ -z "$repo_mirrors" ]; then
+    if [ -z "$repo_name" ] || [ -z "$repo_release_time" ] || [ -z "$repo_mirrors" ] || [ -z "$max_versions" ]; then
         log.error "Missing required arguments"
         log.error "Use -h or --help for usage information"
         return 1
@@ -462,12 +468,14 @@ create-repo-index() {
     jq -n \
         --arg repo_name "$repo_name" \
         --argjson release_time "$repo_release_time" \
+        --argjson max_versions "$max_versions" \
         --argjson repo_mirrors "$repo_mirrors" \
         --argjson theme_object "$theme_object" \
         '{
             schema_ver: 2,
             repo_name: $repo_name,
             release: $release_time,
+            max_versions: $max_versions,
             mirrors: $repo_mirrors,
             themes: $theme_object
         }' \
@@ -478,5 +486,109 @@ create-repo-index() {
         return 0 # Success
     else
         log.fatal "Failed to create $output_file due to a jq error."
+    fi
+}
+
+
+# Compare two files and return 0 if identical, 1 if they differ
+# Auto-detects whether to use diff (text) or cmp (binary) based on file extension
+# Usage: cmp-files <file1> <file2>
+cmp-files() {
+    local file1="$1"
+    local file2="$2"
+    
+    # Get file extension
+    local ext="${file1##*.}"
+    
+    # Text file extensions
+    case "$ext" in
+        html|htm|css|js|jsx|ts|tsx|json|xml|txt|md|mdx|yml|yaml|toml|py|c|cc|cpp|hpp|h|sh|bash|zsh|rs|go|zig|gitignore)
+            # Use diff for text files
+            diff -q "$file1" "$file2" &>/dev/null
+            return $?
+            ;;
+        *)
+            # Use cmp for binary files or unknown extensions
+            cmp -s "$file1" "$file2"
+            return $?
+            ;;
+    esac
+}
+
+
+# Usage: init-meta
+init-meta() {
+    local output_dir="${OUTPUT_DIR}" \
+          gen_readme=true gen_index=true \
+          index_template="$SRC_DIR/meta/index.html" index_html_tpl \
+          index_js="$SRC_DIR/meta/index.js"
+
+    # Check config for what to generate
+    local val
+    val=$(yq eval ".packaging.meta.readme" "$CONFIG_FILE" 2>/dev/null)
+    gen_readme="${val:-true}"  # Default to true if null
+    
+    val=$(yq eval ".packaging.meta.index-html" "$CONFIG_FILE" 2>/dev/null)
+    gen_index="${val:-true}"  # Default to true if null
+
+    # Usage: _copy <source> <dest> [required]
+    _copy() {
+        local src="$1"
+        local dest="$2"
+        local required="${3:-true}"
+        local desc="$(basename "$dest")"
+        
+        if [ ! -f "$src" ]; then
+            if [ "$required" == "true" ]; then
+                log.error "$desc not found"
+                return 1
+            else
+                log.warn "$desc not found: $src"
+                return 0
+            fi
+        elif [ ! -f "$dest" ] || ! cmp-files "$src" "$dest"; then
+            cp "$src" "$dest" || {
+                log.error "Failed to copy $desc"
+                return 1
+            }
+            log.success "$desc"
+        else
+            log.info "Skipped: $desc (same)"
+        fi
+        return 0
+    }
+
+    # Generate index.html if enabled
+    if [ "$gen_index" == "true" ]; then
+
+        # Generate index.html
+        if [ -f "$index_template" ]; then
+            index_html_tpl=$(<"$index_template")
+        else
+            index_html_tpl="$INDEX_CONTENT"
+        fi
+
+        echo "$index_html_tpl" > "$output_dir/index.html"
+        log.success "index.html"
+
+        # Copy CSS, JS, and favicon
+        _copy  "$index_js"                "$output_dir/index.js"     || return 1
+        _copy  "$SRC_DIR/meta/index.css"  "$output_dir/index.css"    || return 1
+        _copy  "$SRC_DIR/icon.ico"        "$output_dir/favicon.ico"  || return 1
+    else
+        # Clean up related files if generation is disabled
+        [ -f "$output_dir/index.html"  ] && rm "$output_dir/index.html"  && log.info "Deleted index.html"
+        [ -f "$output_dir/index.js"    ] && rm "$output_dir/index.js"    && log.info "Deleted index.js"
+        [ -f "$output_dir/index.css"   ] && rm "$output_dir/index.css"   && log.info "Deleted index.css"
+        [ -f "$output_dir/favicon.ico" ] && rm "$output_dir/favicon.ico" && log.info "Deleted favicon.ico"
+    fi
+
+    # Generate README.md if enabled
+    if [ "$gen_readme" == "true" ]; then
+        echo "$README_CONTENT" > "$output_dir/README.md"
+        log.success "README.md"
+    else
+        # Clean up README.md if generation is disabled
+        [ -f "$output_dir/README.md" ] && rm "$output_dir/README.md" && log.info "Deleted README.md"
     fi
 }

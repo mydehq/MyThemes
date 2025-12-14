@@ -143,3 +143,7 @@ log.success() { _log -l success "$@"; }
 log.warn()    { _log -l warn "$@"; }
 log.error()   { _log -l error "$@"; }
 log.fatal()   { _log -l fatal "$@"; exit 1; }
+
+# Export all logging functions
+export -f _tab log.tab.inc log.tab.dec log.tab.reset
+export -f _log log log.debug log.info log.success log.warn log.error log.fatal

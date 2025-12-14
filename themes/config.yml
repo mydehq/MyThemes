@@ -2,15 +2,12 @@ packaging:
   input-dir: "themes"
   output-dir: "dist"
   max-versions: 10
-
-  templates:
-    readme: "src/readme-template.md"
-    index-html: "src/index-template.html"
-
+  meta:
+    readme: true
+    index-html: true
   repo:
     name: "official"
     branch: "repo"
-
     mirrors:
       - "https://github.com/mydehq/mytm/raw/refs/heads/repo/${{theme}}/${{file}}"
       - "https://repo-mytm.vercel.app/${{theme}}/${{file}}"
