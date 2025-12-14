@@ -7,6 +7,18 @@ async function loadRepoData() {
         
         const data = await response.json();
         
+        // Update page title
+        if (data.repo_name) {
+            const titleText = `${data.repo_name} Repo | MyTM`;
+            document.title = titleText;
+            
+            // Update navbar title to match page title
+            const navbarTitle = document.getElementById('navbar-title');
+            if (navbarTitle) {
+                navbarTitle.textContent = titleText;
+            }
+        }
+        
         // Populate repository info
         const repoName = document.getElementById('repo-name');
         const maxVersions = document.getElementById('max-versions');
