@@ -577,6 +577,9 @@ init-meta() {
             index_html_tpl="$INDEX_CONTENT"
         fi
 
+        # Replace {{MYTM_URL}} placeholder with actual URL
+        index_html_tpl="${index_html_tpl//\{\{MYTM_URL\}\}/$MYTM_URL}"
+
         echo "$index_html_tpl" > "$output_dir/index.html"
         log.success "index.html"
 

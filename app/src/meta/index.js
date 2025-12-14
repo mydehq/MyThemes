@@ -9,7 +9,7 @@ async function loadRepoData() {
         
         // Update page title
         if (data.repo_name) {
-            const titleText = `${data.repo_name} Repo | MyTM`;
+            const titleText = `MyTM / ${data.repo_name}`;
             document.title = titleText;
             
             // Update navbar title to match page title
@@ -84,6 +84,19 @@ async function loadRepoData() {
                         ${url}
                     </li>
                 `).join('');
+            }
+        }
+        
+        // Update View Source link
+        const viewSourceLink = document.getElementById('view-source-link');
+        const viewSourceSeparator = viewSourceLink?.nextElementSibling; // The "|" separator
+        
+        if (viewSourceLink && data.repo_url) {
+            viewSourceLink.href = data.repo_url;
+        } else if (viewSourceLink) {
+            viewSourceLink.style.display = 'none';
+            if (viewSourceSeparator && viewSourceSeparator.textContent.includes('|')) {
+                viewSourceSeparator.style.display = 'none';
             }
         }
         
