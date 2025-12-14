@@ -90,7 +90,7 @@ async function loadRepoData() {
     } catch (error) {
         console.error('Error loading repo data:', error);
         
-        // Show helpful error message
+        // Show error message in themes table
         const themesList = document.getElementById('themes-list');
         if (themesList) {
             const isFileProtocol = window.location.protocol === 'file:';
@@ -103,6 +103,12 @@ async function loadRepoData() {
                 : `<div class="text-center text-danger py-4">Failed to load themes. Please check your connection.</div>`;
             
             themesList.innerHTML = `<tr><td colspan="2">${errorMsg}</td></tr>`;
+        }
+        
+        // Show error message in mirrors popup
+        const mirrorsList = document.getElementById('mirrors-list');
+        if (mirrorsList) {
+            mirrorsList.innerHTML = '<li class="text-center text-danger py-3">Failed to load mirrors. Please check your connection.</li>';
         }
     }
 }
