@@ -32,10 +32,16 @@ async function loadRepoData() {
             maxVersions.textContent = data.max_versions;
         }
         
+        // Convert Unix timestamp to local time
         if (lastUpdated && data.release) {
-            // Convert Unix timestamp to readable date
             const date = new Date(data.release * 1000);
-            const formatted = date.toISOString().slice(0, 16).replace('T', ' ');
+            const formatted = date.toLocaleString('sv-SE', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }).replace(',', '');
             lastUpdated.textContent = formatted;
         }
         
