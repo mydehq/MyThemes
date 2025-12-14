@@ -100,7 +100,7 @@ async function loadRepoData() {
                        <small class="text-secondary">This page requires an HTTP server to function.<br>
                        Please serve this directory via HTTP (e.g., using <code>python -m http.server</code> or <code>npx live-server</code>)</small>
                    </div>`
-                : `<div class="text-center text-danger py-4">Failed to load themes. Please check your connection.</div>`;
+                : `<div class="text-center text-danger py-4">Theme data unavailable.<br>Please contact the repository maintainer.</div>`;
             
             themesList.innerHTML = `<tr><td colspan="2">${errorMsg}</td></tr>`;
         }
@@ -108,7 +108,7 @@ async function loadRepoData() {
         // Show error message in mirrors popup
         const mirrorsList = document.getElementById('mirrors-list');
         if (mirrorsList) {
-            mirrorsList.innerHTML = '<li class="text-center text-danger py-3">Failed to load mirrors. Please check your connection.</li>';
+            mirrorsList.innerHTML = '<li class="text-center text-danger py-3">Mirror data unavailable.<br>Please contact the repository maintainer.</li>';
         }
     }
 }
