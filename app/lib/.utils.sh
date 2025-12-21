@@ -529,9 +529,9 @@ cmp-files() {
 init-meta() {
     local output_dir="${OUTPUT_DIR}" \
           gen_readme=true gen_index=true \
-          index_template="$SRC_DIR/meta/index.html" index_html_tpl \
-          index_js="$SRC_DIR/meta/index.js" \
-          index_css="$SRC_DIR/meta/index.css" \
+          index_template="$SRC_DIR/index.html" index_html_tpl \
+          index_js="$SRC_DIR/index.js" \
+          index_css="$SRC_DIR/index.css" \
           favicon="$ICON_DIR/icon.ico"
 
     # Check config for what to generate
@@ -591,7 +591,7 @@ init-meta() {
         _copy  "$favicon"     "$output_dir/favicon.ico"  || return 1
 
         # Copy theme-index.js
-        _copy  "$SRC_DIR/meta/theme-index.js"  "$output_dir/theme-index.js"  || return 1
+        _copy  "$SRC_DIR/theme-index.js"  "$output_dir/theme-index.js"  || return 1
 
     else
         # Clean up related files if generation is disabled

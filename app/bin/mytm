@@ -564,7 +564,7 @@ else
         #------------ Copy Theme Index HTML --------------
 
         # Copy theme-index.html as index.html
-        theme_index_src="$SRC_DIR/meta/theme-index.html"
+        theme_index_src="$SRC_DIR/theme-index.html"
         theme_index_dest="$archive_dir/index.html"
         
         if [ -f "$theme_index_src" ]; then
