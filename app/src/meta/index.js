@@ -123,6 +123,11 @@ async function loadRepoData() {
         if (mirrorsList) {
             mirrorsList.innerHTML = '<li class="text-center text-danger py-3">Mirror data unavailable.<br>Please contact the repository maintainer.</li>';
         }
+    } finally {
+        const loadingMessage = document.getElementById('loading-themes');
+        if (loadingMessage) {
+            loadingMessage.remove();
+        }
     }
 }
 
