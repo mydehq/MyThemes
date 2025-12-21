@@ -1,83 +1,83 @@
 :root {
-  /* Override Bootstrap Primary to 'Maroon' */
-  --bs-primary: #eba0ac;
-  --bs-primary-rgb: 235, 160, 172;
+    /* Override Bootstrap Primary to 'Maroon' */
+    --bs-primary: #eba0ac;
+    --bs-primary-rgb: 235, 160, 172;
 
-  --bs-body-font-family: "Inter", sans-serif;
+    --bs-body-font-family: "Inter", sans-serif;
 
-  --bs-body-bg: #1e1e2e;
-  --bs-body-bg-rgb: 30, 30, 46;
+    --bs-body-bg: #1e1e2e;
+    --bs-body-bg-rgb: 30, 30, 46;
 }
 
 .text-primary {
-  color: var(--bs-primary) !important;
+    color: var(--bs-primary) !important;
 }
 
 .logo-img {
-  width: 40px;
-  height: auto;
-  opacity: 0.9;
+    width: 40px;
+    height: auto;
+    opacity: 0.9;
 }
 
 .navbar {
-  background-color: rgba(30, 30, 46, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background-color: rgba(30, 30, 46, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(235, 160, 172, 0.5);
-  border-radius: 4px;
+    background: rgba(235, 160, 172, 0.5);
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(235, 160, 172, 0.8);
+    background: rgba(235, 160, 172, 0.8);
 }
 
 * {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(235, 160, 172, 0.5) rgba(255, 255, 255, 0.05);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(235, 160, 172, 0.5) rgba(255, 255, 255, 0.05);
 }
 
 /* Mobile Optimizations */
 @media (max-width: 576px) {
-  .table th,
-  .table td {
-    padding: 0.5rem 0.75rem !important;
-    font-size: 0.9rem;
-  }
+    .table th,
+    .table td {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.9rem;
+    }
 
-  .navbar-brand {
-    font-size: 1.1rem;
-  }
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
 
-  .last-updated-text {
-    font-size: 0.75rem;
-  }
+    .last-updated-text {
+        font-size: 0.75rem;
+    }
 }
 
 /* Utility to hide scrollbar */
 .no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 .no-scrollbar::-webkit-scrollbar {
-  display: none;
+    display: none;
 }
 
 /* Footer link hover effect */
 footer a:hover {
-  color: var(--bs-primary) !important;
+    color: var(--bs-primary) !important;
 }
