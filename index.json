@@ -2,7 +2,7 @@
   "schema_ver": 2,
   "repo_name": "official",
   "repo_url": "https://github.com/mydehq/mytm",
-  "release": 1766259818,
+  "release": 1766285170,
   "max_versions": 10,
   "mirrors": [
     "https://github.com/mydehq/mytm/raw/refs/heads/repo/${{theme}}/${{file}}",
