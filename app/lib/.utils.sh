@@ -168,7 +168,7 @@ get-file-size() {
         return 1
     fi
 
-    stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || exit 1
+    wc -c < "$file"
 }
 
 # Calculate total size of theme files and index.json
